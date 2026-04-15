@@ -44,7 +44,6 @@ function sigClass(sig?: string): string {
 }
 
 export function ClinvarResults({ data }: Props) {
-  const filteredOut = (data.unfilteredCount ?? data.count) - data.count;
   const label = filterLabel(data.gene, data.proteinForms);
 
   if (data.count === 0) {
@@ -54,8 +53,6 @@ export function ClinvarResults({ data }: Props) {
         <p style={{ color: "var(--muted)" }}>
           No ClinVar records matched any representation
           {label ? ` for ${label}` : ""}.
-          {filteredOut > 0 &&
-            ` (${filteredOut} raw match${filteredOut === 1 ? "" : "es"} dropped as wrong gene/amino acid.)`}
         </p>
       </div>
     );
@@ -64,13 +61,6 @@ export function ClinvarResults({ data }: Props) {
   return (
     <div className="panel">
       <h2>ClinVar records ({data.count})</h2>
-      {filteredOut > 0 && (
-        <p className="meta" style={{ marginTop: 0 }}>
-          {label ? `Filtered to ${label} — ` : ""}
-          showing {data.count} of {data.unfilteredCount} raw matches
-          ({filteredOut} dropped as wrong gene/amino acid).
-        </p>
-      )}
       {data.records.map((r) => (
         <div className="clinvar-row" key={r.uid}>
           <div className="title">

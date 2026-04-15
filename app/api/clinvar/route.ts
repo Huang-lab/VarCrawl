@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
   const variants = body.variants
     .map((v) => (typeof v === "string" ? v.trim() : ""))
     .filter((v) => v.length > 0)
+    .filter((v, i, arr) => arr.indexOf(v) === i)
     .slice(0, 50);
 
   const gene = typeof body.gene === "string" && body.gene.trim() ? body.gene.trim() : undefined;

@@ -24,6 +24,18 @@ export function delayMs(cfg: EntrezConfig): number {
 }
 
 async function timedFetch(url: string): Promise<Response> {
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (res.ok) return res;
+    const retriable = res.status === 429 || res.status === 500 || res.status === 502 || res.status === 503 || res.status === 504;
+    if (!retriable || attempt === maxAttempts) return res;
+    const retryAfter = Number(res.headers.get("Retry-After"));
+    const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+      ? retryAfter * 1000
+      : 300 * Math.pow(2, attempt - 1);
+    await new Promise((r) => setTimeout(r, waitMs));
+  }
   return fetch(url, { headers: { Accept: "application/json" } });
 }
 

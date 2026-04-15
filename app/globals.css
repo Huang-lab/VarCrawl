@@ -226,6 +226,30 @@ h1 {
   color: var(--accent-2);
 }
 
+.pubmed-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.pubmed-nav-link {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+.pubmed-section {
+  margin-bottom: 12px;
+}
+.pubmed-section-title {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 .spinner {
   color: var(--muted);
   font-style: italic;
