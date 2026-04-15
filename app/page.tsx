@@ -91,6 +91,42 @@ function buildProteinForms(expand: ExpandResponse): string[] {
   return Array.from(out);
 }
 
+function buildPubmedSearchTerms(expand: ExpandResponse): string[] {
+  const baseVariants = expand.variants.map((v) => v.text).filter((v) => v.length > 0);
+  const gene = expand.canonical.gene ?? expand.classified.gene;
+  const escapedGene = gene ? gene.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : undefined;
+  const transcripts = Array.from(
+    new Set(
+      expand.groups.perTranscript
+        .map((g) => g.transcript)
+        .filter((t): t is string => Boolean(t && t.trim()))
+        .map((t) => t.trim()),
+    ),
+  );
+  const coordinateOnly =
+    expand.classified.kind === "hgvsg" &&
+    !gene &&
+    transcripts.length === 0;
+
+  if (coordinateOnly) {
+    return Array.from(new Set(baseVariants));
+  }
+
+  const withContext: string[] = [];
+  for (const v of baseVariants) {
+    const hasGene = !!escapedGene && new RegExp(`\\b${escapedGene}\\b`, "i").test(v);
+    const hasTranscript = transcripts.some((t) => v.includes(t));
+    if (!hasGene && gene) withContext.push(`${gene} ${v}`);
+    if (!hasTranscript) {
+      for (const tx of transcripts.slice(0, 6)) {
+        withContext.push(`${tx} ${v}`);
+      }
+    }
+  }
+
+  return Array.from(new Set([...withContext, ...baseVariants]));
+}
+
 export default function Page() {
   const [expand, setExpand] = useState<ExpandResponse | null>(null);
   const [pubmed, setPubmed] = useState<PubmedResponse | null>(null);
@@ -129,7 +165,8 @@ export default function Page() {
       setExpand(d1);
 
       setLoading("searching");
-      const variants = d1.variants.map((v: VariantString) => v.text);
+      const pubmedVariants = buildPubmedSearchTerms(d1);
+      const clinvarVariants = d1.variants.map((v: VariantString) => v.text);
       const gene = d1.canonical.gene ?? d1.classified.gene;
       const proteinForms = buildProteinForms(d1);
 
@@ -138,12 +175,12 @@ export default function Page() {
         fetch("/api/pubmed", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ variants }),
+          body: JSON.stringify({ variants: pubmedVariants }),
         }).then(async (r) => ({ status: r.status, retryAfter: r.headers.get("Retry-After"), body: await r.json() })),
         fetch("/api/clinvar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ variants, gene, proteinForms }),
+          body: JSON.stringify({ variants: clinvarVariants, gene, proteinForms }),
         }).then(async (r) => ({ status: r.status, retryAfter: r.headers.get("Retry-After"), body: await r.json() })),
       ]);
 
