@@ -86,6 +86,20 @@ describe("classify", () => {
     expect(r.proteinLong).toBe("p.Arg175Ter");
   });
 
+  it("rejects invalid one-letter amino-acid alt code in short form", () => {
+    const r = classify("V600B");
+    expect(r.kind).toBe("unknown");
+    expect(r.proteinShort).toBeUndefined();
+    expect(r.proteinLong).toBeUndefined();
+  });
+
+  it("rejects invalid one-letter amino-acid ref code in short form", () => {
+    const r = classify("B600E");
+    expect(r.kind).toBe("unknown");
+    expect(r.proteinShort).toBeUndefined();
+    expect(r.proteinLong).toBeUndefined();
+  });
+
   it("returns unknown for nonsense", () => {
     const r = classify("this is not a mutation");
     expect(r.kind).toBe("unknown");

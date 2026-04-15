@@ -57,6 +57,7 @@ describe("enumerateVariantStrings (flat)", () => {
     expect(strings).toContain("BRAF:c.1799T>A");
     expect(strings).toContain("NP_004324.2:p.Val600Glu");
     expect(strings).toContain("p.Val600Glu");
+    expect(strings).toContain("p.(Val600Glu)");
     expect(strings).toContain("Val600Glu");
     expect(strings).toContain("V600E");
     expect(strings).toContain("p.V600E");

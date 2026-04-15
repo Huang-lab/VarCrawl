@@ -107,7 +107,7 @@ function enumerateConsequence(
   if (c.proteinLong) {
     dedupe(bucket, c.proteinLong, "p.3-letter");
     dedupe(bucket, c.proteinLong.replace(/^p\./, ""), "3-letter bare");
-    dedupe(bucket, `(${c.proteinLong.replace(/^p\./, "")})`, "p. paren 3-letter");
+    dedupe(bucket, `p.(${c.proteinLong.replace(/^p\./, "")})`, "p. paren 3-letter");
     if (c.gene) dedupe(bucket, `${c.gene} ${c.proteinLong}`, "gene + p.3-letter");
     if (c.gene) dedupe(bucket, `${c.gene}:${c.proteinLong}`, "gene:p.3-letter");
   }

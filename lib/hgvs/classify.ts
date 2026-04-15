@@ -138,6 +138,9 @@ function shortProtein(s: string): Partial<ClassifiedInput> {
     } else {
       alt1 = toOne(alt);
       alt3 = toThree(alt1);
+      // If an alternate AA was provided but is not a valid AA code,
+      // reject this short-protein parse entirely to avoid incorrect annotation.
+      if (!alt3) return {};
     }
   }
 
@@ -148,7 +151,10 @@ function shortProtein(s: string): Partial<ClassifiedInput> {
 
 function toOne(code: string | undefined): string | undefined {
   if (!code) return undefined;
-  if (code.length === 1) return code.toUpperCase();
+  if (code.length === 1) {
+    const one = code.toUpperCase();
+    return AA1_TO_3[one] ? one : undefined;
+  }
   if (code.length === 3) return AA3_TO_1[normalizeCase3(code)];
   return undefined;
 }
