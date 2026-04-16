@@ -234,9 +234,7 @@ export default function Page() {
             complete: false,
             likelyRateLimited: true,
             likelyPartial: true,
-            message: pubmedRes.value.retryAfter
-              ? `PubMed request rate-limited. Retry in ${pubmedRes.value.retryAfter}s.`
-              : "PubMed request rate-limited. Retry shortly.",
+            message: "PubMed may be incomplete due to NCBI rate limiting. Please retry shortly.",
           };
           setPubmed({ count: 0, articles: [], status });
         } else {
@@ -288,6 +286,15 @@ export default function Page() {
         </a>
         )
       </p>
+
+      <div className="panel how-it-works" aria-label="How VarCrawl works">
+        <h2>How it works</h2>
+        <ol>
+          <li>Classify your query, canonicalize it, and generate transcript-aware variant representations.</li>
+          <li>Run exact-phrase Entrez searches per representation, merge PMIDs/ClinVar IDs, and track matched forms.</li>
+          <li>Rank PubMed by best match (with recency tie-breaker) and flag likely incomplete upstream results.</li>
+        </ol>
+      </div>
 
       <SearchForm onSearch={handleSearch} disabled={loading !== "idle"} />
 

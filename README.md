@@ -58,7 +58,8 @@ representation to search on.
 ```
 
 Runs one `esearch` per variant as `"<variant>"[All Fields]`, unions PMIDs,
-batches `esummary` for metadata, returns articles sorted newest-first with
+batches `esummary` for metadata, returns articles sorted by best match
+(more matched representations first; recency as tie-breaker) with
 per-article `matchedBy` attribution.
 
 ### `POST /api/clinvar`
@@ -66,6 +67,38 @@ per-article `matchedBy` attribution.
 Same shape as `/api/pubmed` but queries NCBI `db=clinvar`. Returns ClinVar
 records with germline classification, review status, and conditions, sorted
 by clinical significance (Pathogenic → Likely Pathogenic → VUS → …).
+
+## How it works
+
+1. **Input classification (`lib/hgvs/classify.ts`)**
+  - Detects whether a query looks like protein/cDNA/genomic HGVS, short forms
+    (e.g. `V600E`), gene+variant forms, or dbSNP rsIDs.
+
+2. **Canonicalization + cross-conversion (`lib/hgvs/convert.ts`)**
+  - Resolves a canonical variant using Ensembl VEP (plus fallbacks), then
+    converts across HGVSp ↔ HGVSc ↔ HGVSg and across GRCh38/GRCh37 when possible.
+
+3. **Variant enumeration (`lib/hgvs/enumerate.ts`)**
+  - Expands one canonical event into many searchable strings:
+    bare/with-prefix HGVS, gene-prefixed forms, one-letter and three-letter
+    protein forms, transcript-specific forms, and rsID/genomic coordinate forms.
+  - Groups by transcript so MANE Select / MANE Plus Clinical forms are explicit.
+
+4. **PubMed retrieval (`lib/pubmed/entrez.ts`, `lib/entrez/base.ts`)**
+  - Executes one exact-phrase Entrez `esearch` per representation.
+  - Unions PMIDs across all phrases and tracks `matchedBy` attribution.
+  - Fetches metadata in `esummary` batches.
+  - Ranks by **best match** (more matched representations first), then by date.
+
+5. **ClinVar retrieval + filtering (`lib/clinvar/entrez.ts`, `lib/clinvar/filter.ts`)**
+  - Same phrase-union pattern on `db=clinvar`.
+  - Applies gene/protein-form filtering to reduce off-target records.
+  - Sorts by clinical significance priority.
+
+6. **Resilience controls (`lib/ratelimit.ts`, `lib/cache.ts`)**
+  - Per-client rate limiting (optional Upstash Redis).
+  - Response caching (optional Upstash Redis) for repeated variant lookups.
+  - Source diagnostics mark likely partial/rate-limited upstream retrievals.
 
 ## Testing
 

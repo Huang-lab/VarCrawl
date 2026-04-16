@@ -25,12 +25,13 @@ interface Props {
 
 export function ResultsList({ data }: Props) {
   const statusMessage = data.status?.message;
+  const showRateLimitNotice = Boolean(statusMessage && !data.status?.complete && data.status?.likelyRateLimited);
 
   if (data.count === 0) {
     return (
       <div className="panel">
         <h2>PubMed results</h2>
-        {statusMessage && <p className="notice notice-warning">{statusMessage}</p>}
+        {showRateLimitNotice && <p className="notice notice-warning">{statusMessage}</p>}
         {data.status?.likelyRateLimited || data.status?.likelyPartial ? (
           <p className="muted-text">No articles shown. This is likely due to temporary limits or upstream errors, not necessarily a true zero-match result.</p>
         ) : (
@@ -50,7 +51,7 @@ export function ResultsList({ data }: Props) {
   return (
     <div className="panel">
       <h2>PubMed results ({data.count})</h2>
-      {statusMessage && (data.status?.likelyRateLimited || data.status?.likelyPartial) && (
+      {showRateLimitNotice && (
         <p className="notice notice-warning">{statusMessage}</p>
       )}
       <div className="pubmed-nav" aria-label="Jump to PubMed section">

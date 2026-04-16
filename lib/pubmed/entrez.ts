@@ -91,7 +91,13 @@ export async function searchPubmedForVariantsDetailed(
       matchedBy: Array.from(matchedSet),
     });
   }
-  articles.sort((a, b) => (b.pubDate || "").localeCompare(a.pubDate || ""));
+  // Best-match first: articles matching more variant representations rank higher.
+  // Recency is a tiebreaker.
+  articles.sort((a, b) => {
+    const byMatchCount = b.matchedBy.length - a.matchedBy.length;
+    if (byMatchCount !== 0) return byMatchCount;
+    return (b.pubDate || "").localeCompare(a.pubDate || "");
+  });
   return {
     articles,
     diagnostics: {

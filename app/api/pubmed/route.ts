@@ -34,7 +34,6 @@ function buildStatusFromDiagnostics(diag: {
       complete: false,
       likelyRateLimited: false,
       likelyPartial: true,
-      message: "PubMed may be incomplete due to temporary upstream errors.",
     };
   }
   return {
@@ -54,7 +53,7 @@ export async function POST(req: NextRequest) {
           complete: false,
           likelyRateLimited: true,
           likelyPartial: true,
-          message: "PubMed request blocked by server rate limit. Retry later.",
+          message: "PubMed may be incomplete due to NCBI rate limiting. Please retry shortly.",
         },
       },
       { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },

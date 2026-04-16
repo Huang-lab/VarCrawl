@@ -178,6 +178,20 @@ code:focus-visible {
   letter-spacing: 0.05em;
 }
 
+.how-it-works {
+  margin-bottom: 20px;
+}
+
+.how-it-works ol {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text);
+}
+
+.how-it-works li + li {
+  margin-top: 6px;
+}
+
 .group-block {
   padding: 12px 0;
   border-bottom: 1px dashed var(--border);
