@@ -14,6 +14,7 @@ import {
   EntrezDiagnostics,
   baseParams,
   delayMs,
+  esearchTermWithStatus,
   esummaryBatchWithDiagnostics,
   searchPhrasesInDbWithDiagnostics,
 } from "@/lib/entrez/base";
@@ -56,21 +57,58 @@ interface ClinvarDocsum {
   traits?: { trait_name?: string }[];
 }
 
+export interface ClinvarSearchOptions {
+  /** Gene symbol from the classified input or canonical variant. */
+  gene?: string;
+  /**
+   * Protein forms (1-letter and 3-letter, with/without `p.` prefix) used to
+   * construct a structured ClinVar query like `BRAF[gene] AND (V600E OR ...)`.
+   * This catches records the plain-phrase esearch misses because ClinVar's
+   * All-Fields index doesn't treat "BRAF V600E" as a variant phrase.
+   */
+  proteinForms?: string[];
+}
+
 export async function searchClinvarForVariants(
   variants: string[],
   cfg: EntrezConfig,
+  opts?: ClinvarSearchOptions,
 ): Promise<ClinvarRecord[]> {
-  const res = await searchClinvarForVariantsDetailed(variants, cfg);
+  const res = await searchClinvarForVariantsDetailed(variants, cfg, opts);
   return res.records;
 }
 
 export async function searchClinvarForVariantsDetailed(
   variants: string[],
   cfg: EntrezConfig,
+  opts?: ClinvarSearchOptions,
 ): Promise<ClinvarSearchResult> {
   /* ── 1. Existing esearch path (unchanged) ── */
   const phraseRes = await searchPhrasesInDbWithDiagnostics("clinvar", variants, cfg);
   const matched = phraseRes.matched;
+
+  /* ── 1b. Targeted gene + protein-form query ──
+   * ClinVar's `"phrase"[All Fields]` index doesn't recognize compound strings
+   * like "BRAF V600E" (the 1-letter form rarely appears in indexed titles).
+   * A structured query `BRAF[gene] AND (V600E OR Val600Glu OR "p.Val600Glu")`
+   * mirrors how the ClinVar web UI resolves gene+variant queries and reliably
+   * returns records such as VCV000013961. Best-effort — failures are ignored.
+   */
+  if (opts?.gene && opts.proteinForms && opts.proteinForms.length > 0) {
+    const term = buildGeneProteinQuery(opts.gene, opts.proteinForms);
+    if (term) {
+      await new Promise((r) => setTimeout(r, delayMs(cfg)));
+      const res = await esearchTermWithStatus("clinvar", term, cfg);
+      if (res.ok) {
+        const tag = `${opts.gene} ${shortestProteinForm(opts.proteinForms)}`;
+        for (const id of res.ids) {
+          if (!matched.has(id)) matched.set(id, new Set());
+          matched.get(id)!.add(tag);
+        }
+      }
+    }
+  }
+
   const allIds = Array.from(matched.keys());
 
   let records: ClinvarRecord[] = [];
@@ -328,6 +366,40 @@ function decodeXmlEntities(s: string): string {
     .replace(/&#x([0-9a-fA-F]+);/g, (_, h) =>
       String.fromCharCode(parseInt(h, 16)),
     );
+}
+
+/**
+ * Build a ClinVar esearch term that combines the gene field with any of the
+ * accepted protein forms, e.g. `BRAF[gene] AND (V600E OR Val600Glu)`.
+ *
+ * Forms containing non-word characters (e.g. "p.Val600Glu") are quoted so
+ * NCBI's tokenizer keeps them as a single token. Returns an empty string if
+ * no usable forms remain.
+ */
+export function buildGeneProteinQuery(gene: string, proteinForms: string[]): string {
+  const g = gene.trim();
+  if (!g) return "";
+  const seen = new Set<string>();
+  const terms: string[] = [];
+  for (const raw of proteinForms) {
+    if (!raw) continue;
+    const f = raw.trim();
+    if (!f) continue;
+    const key = f.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    // Quote forms that contain characters the NCBI tokenizer breaks on.
+    const token = /^[A-Za-z0-9]+$/.test(f) ? f : `"${f.replace(/"/g, "")}"`;
+    terms.push(token);
+  }
+  if (terms.length === 0) return "";
+  return `${g}[gene] AND (${terms.join(" OR ")})`;
+}
+
+function shortestProteinForm(forms: string[]): string {
+  const usable = forms.filter((f) => f && f.trim().length > 0);
+  if (usable.length === 0) return "";
+  return [...usable].sort((a, b) => a.length - b.length)[0];
 }
 
 function normalizeConditionStrings(values: string[]): string[] {

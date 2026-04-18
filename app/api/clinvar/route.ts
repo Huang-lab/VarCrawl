@@ -102,7 +102,10 @@ export async function POST(req: NextRequest) {
     tool: "varcrawl",
   };
 
-  const searchRes = await searchClinvarForVariantsDetailed(variants, cfg);
+  const searchRes = await searchClinvarForVariantsDetailed(variants, cfg, {
+    gene,
+    proteinForms,
+  });
   const all = searchRes.records;
   const { kept } = filterClinvarRecords(all, { gene, proteinForms });
   const resp = {

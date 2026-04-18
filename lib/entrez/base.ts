@@ -164,6 +164,43 @@ export async function esearchPhrase(
   return res.ids;
 }
 
+/**
+ * esearch with a caller-built term string (no quoting or field wrapping added).
+ * Use this for structured queries like `BRAF[gene] AND (V600E OR Val600Glu)`
+ * that the plain-phrase path can't express.
+ */
+export async function esearchTermWithStatus(
+  db: string,
+  term: string,
+  cfg: EntrezConfig,
+  retmax = 200,
+): Promise<EsearchPhraseResult> {
+  const params = baseParams(cfg);
+  params.set("db", db);
+  params.set("term", term);
+  params.set("retmode", "json");
+  params.set("retmax", String(retmax));
+  const url = `${EUTILS}/esearch.fcgi?${params.toString()}`;
+  const res = await timedFetch(url);
+  if (!res.ok) {
+    return {
+      ids: [],
+      ok: false,
+      status: res.status,
+      rateLimited: isRateLimitStatus(res.status),
+    };
+  }
+  const data = (await res.json()) as {
+    esearchresult?: { idlist?: string[] };
+  };
+  return {
+    ids: data.esearchresult?.idlist ?? [],
+    ok: true,
+    status: res.status,
+    rateLimited: false,
+  };
+}
+
 /** esummary for a batch of UIDs. Returns the raw `result` map minus the `uids` array. */
 export async function esummaryBatch<T>(
   db: string,
