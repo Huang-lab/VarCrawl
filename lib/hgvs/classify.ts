@@ -2,8 +2,10 @@ import { AA1_TO_3, AA3_TO_1, ClassifiedInput, HgvsKind } from "./types";
 
 // Protein short form like V600E, R175H, *572Gln, Trp24*, etc.
 // Accepts leading "p." and optional parens, handles 1-letter or 3-letter codes.
+// Case-insensitive so user input like "v600e" or "val600glu" still matches;
+// AA code normalization is handled by toOne()/normalizeCase3() downstream.
 const SHORT_PROTEIN_RE =
-  /^(?:p\.)?\(?([A-Z]|[A-Z][a-z]{2})(\d+)([A-Z]|[A-Z][a-z]{2}|\*|=|fs\*?\d*|del|dup|ins[A-Za-z]+)?\)?$/;
+  /^(?:p\.)?\(?([A-Z]|[A-Z][A-Z]{2})(\d+)([A-Z]|[A-Z][A-Z]{2}|\*|=|fs\*?\d*|del|dup|ins[A-Z]+)?\)?$/i;
 
 const ACCESSION_PREFIXES = {
   NM: "hgvsc",
@@ -60,10 +62,13 @@ export function classify(raw: string): ClassifiedInput {
     return { raw, kind: "rsid", body: trimmed.toLowerCase() };
   }
 
-  // Allow a gene symbol + space + HGVS-ish body (e.g. "BRAF p.V600E" or "BRAF V600E")
-  const geneSpace = trimmed.match(/^([A-Z][A-Z0-9-]{0,15})\s+(.+)$/);
+  // Allow a gene symbol + space + HGVS-ish body (e.g. "BRAF p.V600E" or "BRAF V600E").
+  // Case-insensitive: lowercase input like "braf v600e" is accepted and the gene
+  // is uppercased so downstream consumers (VEP, ClinVar [gene] field) get the
+  // canonical HGNC form.
+  const geneSpace = trimmed.match(/^([A-Za-z][A-Za-z0-9-]{0,15})\s+(.+)$/);
   if (geneSpace && !/^(chr|NC_|NM_|NP_|NR_|NG_|ENST|ENSP|LRG_)/i.test(geneSpace[1])) {
-    const gene = geneSpace[1];
+    const gene = geneSpace[1].toUpperCase();
     const rest = classify(geneSpace[2]);
     return { ...rest, raw, gene };
   }
@@ -94,9 +99,10 @@ export function classify(raw: string): ClassifiedInput {
       return { raw, kind, accession: prefix, body, ...shortProtein(body) };
     }
 
-    // Gene symbol prefix (e.g. "BRAF:p.V600E")
-    if (/^[A-Z][A-Z0-9-]{0,15}$/.test(prefix) && kindFromBody !== "unknown") {
-      return { raw, kind: kindFromBody, gene: prefix, body, ...shortProtein(body) };
+    // Gene symbol prefix (e.g. "BRAF:p.V600E"). Accept lowercase gene and
+    // uppercase for downstream consistency.
+    if (/^[A-Za-z][A-Za-z0-9-]{0,15}$/.test(prefix) && kindFromBody !== "unknown") {
+      return { raw, kind: kindFromBody, gene: prefix.toUpperCase(), body, ...shortProtein(body) };
     }
   }
 

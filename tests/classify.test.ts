@@ -104,4 +104,59 @@ describe("classify", () => {
     const r = classify("this is not a mutation");
     expect(r.kind).toBe("unknown");
   });
+
+  it("accepts lowercase protein body in gene + space form", () => {
+    const r = classify("BRAF v600e");
+    expect(r.kind).toBe("short");
+    expect(r.gene).toBe("BRAF");
+    expect(r.proteinShort).toBe("V600E");
+    expect(r.proteinLong).toBe("p.Val600Glu");
+  });
+
+  it("accepts lowercase gene symbol and uppercases it", () => {
+    const r = classify("braf V600E");
+    expect(r.kind).toBe("short");
+    expect(r.gene).toBe("BRAF");
+    expect(r.proteinShort).toBe("V600E");
+    expect(r.proteinLong).toBe("p.Val600Glu");
+  });
+
+  it("accepts fully lowercase gene + short form", () => {
+    const r = classify("braf v600e");
+    expect(r.kind).toBe("short");
+    expect(r.gene).toBe("BRAF");
+    expect(r.proteinShort).toBe("V600E");
+    expect(r.proteinLong).toBe("p.Val600Glu");
+  });
+
+  it("accepts lowercase 3-letter protein with gene", () => {
+    const r = classify("kras gly12asp");
+    expect(r.kind).toBe("short");
+    expect(r.gene).toBe("KRAS");
+    expect(r.proteinShort).toBe("G12D");
+    expect(r.proteinLong).toBe("p.Gly12Asp");
+  });
+
+  it("accepts lowercase p. form with gene", () => {
+    const r = classify("BRAF p.v600e");
+    expect(r.kind).toBe("hgvsp");
+    expect(r.gene).toBe("BRAF");
+    expect(r.proteinShort).toBe("V600E");
+    expect(r.proteinLong).toBe("p.Val600Glu");
+  });
+
+  it("accepts lowercase gene:p.form", () => {
+    const r = classify("braf:p.v600e");
+    expect(r.kind).toBe("hgvsp");
+    expect(r.gene).toBe("BRAF");
+    expect(r.proteinShort).toBe("V600E");
+    expect(r.proteinLong).toBe("p.Val600Glu");
+  });
+
+  it("accepts bare lowercase short protein", () => {
+    const r = classify("v600e");
+    expect(r.kind).toBe("short");
+    expect(r.proteinShort).toBe("V600E");
+    expect(r.proteinLong).toBe("p.Val600Glu");
+  });
 });
