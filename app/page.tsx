@@ -250,8 +250,17 @@ export default function Page() {
       const requiresGeneForLiterature = isProteinOrCdnaOnly(d1.classified.kind);
       const skipLiteratureSearch = requiresGeneForLiterature && !gene;
 
-      // Fan out to PubMed and ClinVar in parallel — they are independent.
-      const [pubmedRes, clinvarRes] = await Promise.allSettled([
+      // ClinVar first, then PubMed — both hit NCBI Entrez, so running them
+      // sequentially avoids doubling per-user API usage.
+      const [clinvarRes] = await Promise.allSettled([
+        fetch("/api/clinvar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ variants: clinvarVariants, gene, proteinForms }),
+        }).then(async (r) => ({ status: r.status, retryAfter: r.headers.get("Retry-After"), body: await r.json() })),
+      ]);
+
+      const [pubmedRes] = await Promise.allSettled([
         skipLiteratureSearch
           ? Promise.resolve({
               status: 200,
@@ -273,11 +282,6 @@ export default function Page() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ variants: pubmedVariants }),
             }).then(async (r) => ({ status: r.status, retryAfter: r.headers.get("Retry-After"), body: await r.json() })),
-        fetch("/api/clinvar", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ variants: clinvarVariants, gene, proteinForms }),
-        }).then(async (r) => ({ status: r.status, retryAfter: r.headers.get("Retry-After"), body: await r.json() })),
       ]);
 
       const explain = (label: string, v: { status: number; retryAfter: string | null; body: { error?: string } }): string => {
