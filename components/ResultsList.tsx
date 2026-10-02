@@ -1,5 +1,7 @@
 "use client";
 
+import { cleanTitle } from "@/lib/text";
+
 interface Article {
   pmid: string;
   title: string;
@@ -102,7 +104,7 @@ export function ResultsList({ data }: Props) {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    {a.title || `(no title, PMID ${a.pmid})`}
+                    {cleanTitle(a.title) || `(no title, PMID ${a.pmid})`}
                   </a>
                 </div>
                 <div className="meta">

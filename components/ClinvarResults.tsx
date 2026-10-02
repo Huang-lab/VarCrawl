@@ -1,5 +1,8 @@
 "use client";
 
+import { sigClass } from "@/lib/clinvar/significance";
+import { cleanTitle, decodeEntities } from "@/lib/text";
+
 interface ClinvarRecord {
   uid: string;
   accession?: string;
@@ -39,25 +42,6 @@ function filterLabel(gene?: string, forms?: string[]): string {
   return parts.join(" ");
 }
 
-function sigClass(sig?: string): string {
-  const x = (sig ?? "").toLowerCase();
-  if (x.includes("pathogenic") && !x.includes("likely") && !x.includes("benign")) return "sig-path";
-  if (x.includes("likely pathogenic")) return "sig-lpath";
-  if (x.includes("uncertain") || x.includes("conflicting")) return "sig-vus";
-  if (x.includes("likely benign")) return "sig-lbenign";
-  if (x.includes("benign")) return "sig-benign";
-  return "sig-other";
-}
-
-function decodeXmlEntities(s: string): string {
-  return s
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'");
-}
-
 function normalizeConditionsForDisplay(values: string[]): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
@@ -71,7 +55,7 @@ function normalizeConditionsForDisplay(values: string[]): string[] {
   };
 
   for (const raw of values) {
-    const decoded = decodeXmlEntities(raw ?? "").trim();
+    const decoded = decodeEntities(raw ?? "").trim();
     if (!decoded) continue;
 
     const embedded = Array.from(
@@ -131,7 +115,7 @@ export function ClinvarResults({ data }: Props) {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                {r.title || r.accession || `ClinVar UID ${r.uid}`}
+                {(r.title && cleanTitle(r.title)) || r.accession || `ClinVar UID ${r.uid}`}
               </a>
             </div>
             {r.clinicalSignificance && (

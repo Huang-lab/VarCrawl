@@ -4,12 +4,12 @@ Powered by the Huang Lab at Mount Sinai (<https://labs.icahn.mssm.edu/kuanhuangl
 
 GitHub: <https://github.com/Huang-lab/VarCrawl>
 
-A serverless web app for searching PubMed and ClinVar by mutation. Paste a
+A serverless web app for searching PubMed, Europe PMC, and ClinVar by mutation. Paste a
 mutation in any common notation (HGVSp, HGVSc, HGVSg, short forms like `V600E`,
 `BRAF p.V600E`, dbSNP rsIDs) and the app expands it into every string
 representation the mutation might appear under in the literature, groups them
 by transcript/isoform (with MANE Select / MANE Plus Clinical badges), and
-searches both PubMed (Entrez) and ClinVar for each as an exact phrase.
+searches PubMed (Entrez), Europe PMC, and ClinVar for each as an exact phrase.
 
 ## Stack
 
@@ -19,16 +19,10 @@ searches both PubMed (Entrez) and ClinVar for each as an exact phrase.
 - **Mutalyzer** (`mutalyzer.nl/api`) as an HGVS normalizer (best-effort).
 - **NCBI Variation Services** as a RefSeq-aware fallback (best-effort).
 - **NCBI Entrez E-utilities** (`eutils.ncbi.nlm.nih.gov`) for PubMed search.
+- **Europe PMC REST API** (`ebi.ac.uk/europepmc`) for supplemental literature recall.
 - **Upstash Redis** (optional) for caching.
 
-The original request referenced [TransVar](https://github.com/zwdzwd/transvar)
-for coordinate conversion. TransVar needs ~3 GB of reference genome FASTA plus
-a transcript annotation database, which exceeds Vercel's function size limits.
-Ensembl VEP implements the same HGVS ↔ coordinate logic over a public REST API,
-so we compose it in place of self-hosting TransVar.
-
 ## Genome assemblies
-
 GRCh38 and GRCh37 are fully supported via the two Ensembl REST endpoints.
 
 ## Getting started
@@ -59,10 +53,10 @@ representation to search on.
 { "variants": ["V600E", "p.Val600Glu", "c.1799T>A", "chr7:g.140753336A>T"] }
 ```
 
-Runs one `esearch` per variant as `"<variant>"[All Fields]`, unions PMIDs,
-batches `esummary` for metadata, returns articles sorted by best match
-(more matched representations first; recency as tie-breaker) with
-per-article `matchedBy` attribution.
+Runs one phrase query per variant against PubMed and Europe PMC, unions PMIDs,
+batches PubMed `esummary` metadata, and returns merged articles sorted by best
+match (more matched representations first; recency as tie-breaker) with
+per-article `matchedBy` attribution and source labels.
 
 ### `POST /api/clinvar`
 
@@ -101,6 +95,18 @@ by clinical significance (Pathogenic → Likely Pathogenic → VUS → …).
   - Per-client rate limiting (optional Upstash Redis).
   - Response caching (optional Upstash Redis) for repeated variant lookups.
   - Source diagnostics mark likely partial/rate-limited upstream retrievals.
+
+## Penetrance and literature in one search
+
+One search box takes an rsID, HGVS, or gene + change.
+The result page shows a summary (variant, penetrance, ClinVar, literature count), then a penetrance card with 100-person icon arrays for ICD-10 and clinical algorithm definitions, then ClinVar and PubMed/Europe PMC results.
+Penetrance is matched by rsID, or by GRCh38 position.
+Each estimate has a 95% Wilson confidence range, and variants with fewer than 30 carriers are flagged.
+With no search, the page lets you browse the dataset by condition.
+
+Data is bundled in `public/data/etable4_penetrance.csv` (lifetime penetrance, all ages) and you can upload your own CSV with the same columns.
+Add an `Age` column to provide age-specific data: rows sharing a variant form a cumulative penetrance curve, and the card shows an age slider and chart.
+The "Demo: age-specific" dataset is synthetic and illustrative only.
 
 ## Testing
 

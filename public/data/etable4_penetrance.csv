@@ -1,0 +1,238 @@
+Disease,CHR,POS,REF,ALT,rsID,"Individuals with variants, n","ICD-10 affected individuals with variants, n","ICD-10 penetrance, %","Clinical algorithm affected individuals with variants, n","Clinical algorithm penetrance, %","Penetrance difference, %"
+Age-related macular degeneration,19,44907807,G,A,rs201672011,990,60,6.060606061,36,3.636363636,2.424242424
+Age-related macular degeneration,1,94043413,G,A,rs61751374,114,6,5.263157895,2,1.754385965,3.50877193
+Age-related macular degeneration,19,44908783,C,T,rs769455,3798,144,3.791469194,84,2.211690363,1.579778831
+Age-related macular degeneration,1,94008251,C,T,rs1800553,604,18,2.98013245,10,1.655629139,1.324503311
+Age-related macular degeneration,1,196747245,C,T,rs121913059,30,0,0,0,0,0
+Age-related macular degeneration,1,94031110,G,A,rs61750130,26,0,0,0,0,0
+Age-related macular degeneration,19,44908784,G,A,rs121918397,18,0,0,0,0,0
+Age-related macular degeneration,10,49482689,G,A,rs151242354,12,0,0,0,0,0
+Age-related macular degeneration,1,94046943,T,C,rs201471607,8,0,0,0,0,0
+Age-related macular degeneration,1,94098928,G,A,rs61750200,8,0,0,0,0,0
+Age-related macular degeneration,1,94008767,A,G,rs61753033,6,0,0,0,0,0
+Age-related macular degeneration,1,94062710,G,A,rs61749409,6,0,0,0,0,0
+Age-related macular degeneration,10,49478437,G,A,rs121917901,6,0,0,0,0,0
+Age-related macular degeneration,10,49482809,G,A,rs121917904,6,0,0,0,0,0
+Age-related macular degeneration,1,94005500,G,A,rs61751383,4,0,0,0,0,0
+Age-related macular degeneration,1,94021339,C,T,rs61751403,4,0,0,0,0,0
+Age-related macular degeneration,1,94041367,C,T,rs61751399,4,0,0,0,0,0
+Age-related macular degeneration,1,94111579,C,T,rs150774447,4,0,0,0,0,0
+Age-related macular degeneration,1,196743552,G,T,rs121913062,3,0,0,0,0,0
+Age-related macular degeneration,1,94005509,G,A,rs61751408,2,0,0,0,0,0
+Age-related macular degeneration,1,94014685,G,A,rs760549861,2,0,0,0,0,0
+Age-related macular degeneration,1,94021340,G,A,rs61751404,2,0,0,0,0,0
+Age-related macular degeneration,1,94098794,C,A,rs62645944,2,0,0,0,0,0
+Brugada syndrome,3,38562422,C,A,rs199473220,3,0,0,0,0,0
+Brugada syndrome,3,38606682,C,T,rs199473101,2,0,0,0,0,0
+Brugada syndrome,3,38551022,C,T,rs137854601,1,0,0,0,0,0
+Brugada syndrome,3,38551519,GAGA,G,rs749697698,1,0,0,0,0,0
+Brugada syndrome,3,38585944,AC,A,rs794728912,1,0,0,0,0,0
+Brugada syndrome,3,38609823,C,T,rs199473083,1,0,0,0,0,0
+Brugada syndrome,3,38613773,G,A,rs199473072,1,0,0,0,0,0
+Malignant tumor of prostate,13,32319298,G,T,rs397507646,4,4,100,4,100,0
+Malignant tumor of prostate,13,32337160,TAAAC,T,rs80359351,2,1,50,1,50,0
+Malignant tumor of prostate,13,32337160,TAAAC,TAAC,rs80359351,2,1,50,1,50,0
+Malignant tumor of prostate,22,28687974,G,A,rs200432447,12,4,33.33333333,4,33.33333333,0
+Malignant tumor of prostate,X,67723690,C,T,rs143040492,12,2,16.66666667,2,16.66666667,0
+Malignant tumor of prostate,13,32340300,GT,G,rs80359550,38,1,2.631578947,3,7.894736842,5.263157895
+Malignant tumor of prostate,22,28695868,AG,A,rs555607708,39,0,0,0,0,0
+Malignant tumor of prostate,13,32338277,G,T,rs80358638,32,0,0,0,0,0
+Malignant tumor of prostate,22,28725338,T,C,rs28909982,20,0,0,0,0,0
+Malignant tumor of prostate,10,87931087,GAGGT,G,.,8,0,0,0,0,0
+Malignant tumor of prostate,13,32337305,G,GA,.,8,0,0,0,0,0
+Malignant tumor of prostate,13,32338075,GT,G,.,8,0,0,0,0,0
+Malignant tumor of prostate,13,32338986,A,AG,.,8,0,0,0,0,0
+Malignant tumor of prostate,13,32340577,CAAAGTT,C,.,8,0,0,0,0,0
+Malignant tumor of prostate,13,32398321,G,GC,.,8,0,0,0,0,0
+Malignant tumor of prostate,22,28696932,AG,A,.,8,0,0,0,0,0
+Malignant tumor of prostate,13,32331009,C,T,rs80358998,8,0,0,0,0,0
+Malignant tumor of prostate,13,32340392,A,T,rs80358840,8,0,0,0,0,0
+Malignant tumor of prostate,13,32356463,C,T,rs80358971,8,0,0,0,0,0
+Malignant tumor of prostate,13,32356472,C,T,rs80358972,8,0,0,0,0,0
+Malignant tumor of prostate,13,32356550,C,T,rs80358981,8,0,0,0,0,0
+Malignant tumor of prostate,13,32379800,G,A,rs80359152,8,0,0,0,0,0
+Malignant tumor of prostate,13,32380085,C,T,rs80359180,8,0,0,0,0,0
+Malignant tumor of prostate,X,67545621,G,A,rs370215797,6,0,0,0,0,0
+Malignant tumor of prostate,13,32336781,T,G,rs397507285,4,0,0,0,0,0
+Malignant tumor of prostate,13,32339320,C,G,rs80358721,4,0,0,0,0,0
+Malignant tumor of prostate,13,32340128,C,T,rs80358806,4,0,0,0,0,0
+Malignant tumor of prostate,13,32340212,G,T,rs80358814,4,0,0,0,0,0
+Malignant tumor of prostate,13,32379913,G,A,rs28897756,4,0,0,0,0,0
+Malignant tumor of prostate,13,32394726,C,G,rs80359200,4,0,0,0,0,0
+Malignant tumor of prostate,13,32394814,C,T,rs80359212,4,0,0,0,0,0
+Malignant tumor of prostate,22,28725278,G,A,rs730881701,4,0,0,0,0,0
+Malignant tumor of prostate,22,28734443,C,T,rs587782070,4,0,0,0,0,0
+Malignant tumor of prostate,22,28734637,G,A,rs761494650,4,0,0,0,0,0
+Malignant tumor of prostate,13,32380135,G,GA,rs80359752,3,0,0,0,0,0
+Malignant tumor of prostate,13,32398209,TTGTA,T,rs781465150,3,0,0,0,0,0
+Malignant tumor of prostate,13,32319168,AAAC,A,rs11571587,2,0,0,0,0,0
+Malignant tumor of prostate,13,32337952,CTG,C,rs80359391,2,0,0,0,0,0
+Malignant tumor of prostate,13,32340151,TAACC,T,rs80359538,2,0,0,0,0,0
+Malignant tumor of prostate,13,32340151,TAACC,*,rs80359538,2,0,0,0,0,0
+Malignant tumor of prostate,13,32340202,TGTTA,T,rs80359543,2,0,0,0,0,0
+Malignant tumor of prostate,13,32340816,ATC,A,rs80359596,2,0,0,0,0,0
+Malignant tumor of prostate,22,28695238,TA,T,rs587780174,2,0,0,0,0,0
+Malignant tumor of prostate,10,87864518,CAA,C,rs587781912,1,0,0,0,0,0
+Malignant tumor of prostate,13,32329467,CTG,C,rs768580992,1,0,0,0,0,0
+Malignant tumor of prostate,13,32330986,TGACA,T,rs80359659,1,0,0,0,0,0
+Malignant tumor of prostate,13,32332778,AAAAG,A,rs80359277,1,0,0,0,0,0
+Malignant tumor of prostate,13,32333228,AAAAAG,A,rs80359302,1,0,0,0,0,0
+Malignant tumor of prostate,13,32336684,G,GA,rs80359328,1,0,0,0,0,0
+Malignant tumor of prostate,13,32337055,TC,T,rs397507637,1,0,0,0,0,0
+Malignant tumor of prostate,13,32337420,ATAACAT,A,rs730881605,1,0,0,0,0,0
+Malignant tumor of prostate,13,32338034,CTG,C,rs80359395,1,0,0,0,0,0
+Malignant tumor of prostate,13,32338069,GA,G,rs80359401,1,0,0,0,0,0
+Malignant tumor of prostate,13,32338212,AAAAT,A,rs80359410,1,0,0,0,0,0
+Malignant tumor of prostate,13,32338565,TC,T,rs398122777,1,0,0,0,0,0
+Malignant tumor of prostate,13,32338824,TACTG,T,rs80359451,1,0,0,0,0,0
+Malignant tumor of prostate,13,32339318,T,TA,rs398122789,1,0,0,0,0,0
+Malignant tumor of prostate,13,32339378,TGTA,T,rs431825326,1,0,0,0,0,0
+Malignant tumor of prostate,13,32339394,CTG,C,rs80359478,1,0,0,0,0,0
+Malignant tumor of prostate,13,32339571,ATTTAAGT,A,rs80359496,1,0,0,0,0,0
+Malignant tumor of prostate,13,32339928,CAATT,C,rs770318608,1,0,0,0,0,0
+Malignant tumor of prostate,13,32339983,AAAC,A,rs771028475,1,0,0,0,0,0
+Malignant tumor of prostate,13,32340149,CAT,C,rs763890036,1,0,0,0,0,0
+Malignant tumor of prostate,13,32340629,CTT,C,rs11571658,1,0,0,0,0,0
+Malignant tumor of prostate,13,32340751,A,AT,rs431825342,1,0,0,0,0,0
+Malignant tumor of prostate,13,32340836,GACAA,G,rs770263702,1,0,0,0,0,0
+Malignant tumor of prostate,13,32340882,ACATT,A,rs397507865,1,0,0,0,0,0
+Malignant tumor of prostate,13,32340998,TACTC,T,rs80359616,1,0,0,0,0,0
+Malignant tumor of prostate,13,32354920,TTC,T,rs756538291,1,0,0,0,0,0
+Malignant tumor of prostate,13,32355212,GA,G,rs80359646,1,0,0,0,0,0
+Malignant tumor of prostate,13,32357794,CAG,C,rs80359672,1,0,0,0,0,0
+Malignant tumor of prostate,13,32362626,GCCTTT,G,rs80359686,1,0,0,0,0,0
+Malignant tumor of prostate,13,32363498,AC,A,rs80359705,1,0,0,0,0,0
+Malignant tumor of prostate,13,32370483,TTA,T,rs397507984,1,0,0,0,0,0
+Malignant tumor of prostate,13,32394863,CTG,C,rs80359763,1,0,0,0,0,0
+Malignant tumor of prostate,22,28689173,C,CCT,rs587782707,1,0,0,0,0,0
+Malignant tumor of prostate,22,28724977,CT,C,rs587782245,1,0,0,0,0,0
+Malignant tumor of prostate,22,28725083,ATCT,A,rs587782008,1,0,0,0,0,0
+Hepatocellular carcinoma,17,7673776,G,C,rs28934574,8,0,0,0,0,0
+Hepatocellular carcinoma,17,7673802,C,T,rs28934576,8,0,0,0,0,0
+Hepatocellular carcinoma,17,7675088,C,T,rs28934578,8,0,0,0,0,0
+Hepatocellular carcinoma,17,7675139,C,T,rs587782144,8,0,0,0,0,0
+Hepatocellular carcinoma,5,112792446,C,T,rs62619935,3,0,0,0,0,0
+Hepatocellular carcinoma,5,112838220,C,T,rs121913333,3,0,0,0,0,0
+Hepatocellular carcinoma,5,112842303,C,T,rs768922431,3,0,0,0,0,0
+Hepatocellular carcinoma,5,112838742,GC,G,rs730882135,1,0,0,0,0,0
+Hepatocellular carcinoma,5,112839514,TAAAAG,T,rs121913224,1,0,0,0,0,0
+Hepatocellular carcinoma,6,160070006,G,A,rs121434588,1,0,0,0,0,0
+Arrhythmogenic right ventricular cardiomyopathy,12,32841103,C,T,rs193922672,14,0,0,0,0,0
+Arrhythmogenic right ventricular cardiomyopathy,6,7580721,C,T,rs397516940,2,0,0,0,0,0
+Arrhythmogenic right ventricular cardiomyopathy,12,32850907,G,A,rs372827156,2,0,0,0,0,0
+Arrhythmogenic right ventricular cardiomyopathy,12,32868935,G,A,rs766209297,2,0,0,0,0,0
+Arrhythmogenic right ventricular cardiomyopathy,12,32896580,ACTGT,A,rs397516997,2,0,0,1,50,50
+Arrhythmogenic right ventricular cardiomyopathy,18,31538869,TTG,T,rs397516703,1,0,0,0,0,0
+Primary pulmonary hypertension,2,202555352,G,A,rs557172581,16,0,0,0,0,0
+Primary pulmonary hypertension,2,202520142,G,A,rs200948870,12,0,0,0,0,0
+Primary pulmonary hypertension,2,202555436,C,T,rs777458559,4,0,0,0,0,0
+Diabetes mellitus type 2,11,17387211,G,A,rs780957825,3,3,100,3,100,0
+Diabetes mellitus type 2,11,17395611,G,A,rs193922402,10,5,50,5,50,0
+Diabetes mellitus type 2,12,120996568,C,G,rs754729248,18,4,22.22222222,4,22.22222222,0
+Diabetes mellitus type 2,17,81809839,G,A,rs1801483,508,90,17.71653543,82,16.14173228,1.57480315
+Diabetes mellitus type 2,11,17397055,C,T,rs151344623,255,20,7.843137255,25,9.803921569,1.960784314
+Diabetes mellitus type 2,11,17474955,C,T,rs72559734,10,0,0,0,0,0
+Diabetes mellitus type 2,7,127614533,G,A,rs114202595,8,0,0,0,0,0
+Diabetes mellitus type 2,11,17387331,G,A,rs104894237,6,0,0,3,50,50
+Diabetes mellitus type 2,3,171005347,G,A,rs121909743,4,0,0,2,50,50
+Diabetes mellitus type 2,4,6277579,C,T,rs71530923,4,0,0,0,0,0
+Diabetes mellitus type 2,3,12381349,C,A,rs1800571,3,0,0,0,0,0
+Diabetes mellitus type 2,3,12416831,G,A,rs28936407,3,0,0,0,0,0
+Diabetes mellitus type 2,2,226796916,G,C,rs104893642,2,0,0,1,50,50
+Diabetes mellitus type 2,3,170998317,G,A,rs121909744,2,0,0,0,0,0
+Diabetes mellitus type 2,3,170999142,G,A,rs121909742,2,0,0,0,0,0
+Diabetes mellitus type 2,4,6301306,C,T,rs28937892,2,0,0,0,0,0
+Diabetes mellitus type 2,4,6301846,C,T,rs387906930,2,0,0,0,0,0
+Familial hypercholesterolemia,5,42711291,C,T,rs121909363,3,3,100,3,100,0
+Familial hypercholesterolemia,19,11105568,A,G,rs373822756,2,2,100,0,0,100
+Familial hypercholesterolemia,19,11113337,C,T,rs570942190,4,2,50,0,0,50
+Familial hypercholesterolemia,19,11123263,C,T,rs200793488,4,2,50,0,0,50
+Familial hypercholesterolemia,19,11120143,C,T,rs746118995,10,4,40,0,0,40
+Familial hypercholesterolemia,19,11105588,G,C,rs121908029,6,2,33.33333333,2,33.33333333,0
+Familial hypercholesterolemia,19,11105436,C,T,rs121908026,8,2,25,4,66.66666667,41.66666667
+Familial hypercholesterolemia,5,42699978,A,G,rs121909360,6,0,0,0,0,0
+Familial hypercholesterolemia,19,11105572,C,A,rs756613387,4,0,0,0,0,0
+Familial hypercholesterolemia,19,11113743,G,A,rs28942080,4,0,0,2,50,50
+Familial hypercholesterolemia,19,11116988,C,T,rs377449975,4,0,0,0,0,0
+Familial hypercholesterolemia,19,11105549,C,T,rs764042910,2,0,0,0,0,0
+Familial hypercholesterolemia,19,11105550,G,A,rs753319170,2,0,0,0,0,0
+Familial hypercholesterolemia,19,11107484,G,A,rs121908030,2,0,0,2,100,100
+Familial hypercholesterolemia,19,11110660,G,A,rs746834464,2,0,0,0,0,0
+Familial hypercholesterolemia,19,11113307,C,T,rs121908043,2,0,0,0,0,0
+Familial hypercholesterolemia,19,11113620,G,A,rs139624145,2,0,0,0,0,0
+Familial hypercholesterolemia,19,11116153,G,A,rs28941776,2,0,0,0,0,0
+Familial hypercholesterolemia,19,11120435,C,T,rs2569548,2,0,0,0,0,0
+Familial hypercholesterolemia,19,11129606,A,G,rs28942085,2,0,0,0,0,0
+Familial cancer of breast,13,32336781,T,G,rs397507285,4,4,100,0,0,100
+Familial cancer of breast,13,32339320,C,G,rs80358721,4,4,100,0,0,100
+Familial cancer of breast,13,32394726,C,G,rs80359200,4,4,100,4,100,0
+Familial cancer of breast,11,108244927,C,T,rs557012154,2,2,100,2,100,0
+Familial cancer of breast,11,108315911,G,A,rs139770721,2,2,100,2,100,0
+Familial cancer of breast,16,23635795,G,A,rs180177091,2,2,100,0,0,100
+Familial cancer of breast,17,43082434,G,A,rs41293455,1,1,100,1,100,0
+Familial cancer of breast,17,43091714,G,A,rs80357208,1,1,100,1,100,0
+Familial cancer of breast,17,43094472,C,T,rs80356935,1,1,100,0,0,100
+Familial cancer of breast,17,43104260,A,C,rs80356936,1,1,100,0,0,100
+Familial cancer of breast,17,43106487,A,C,rs28897672,1,1,100,1,100,0
+Familial cancer of breast,17,43074403,C,A,rs80357366,3,2,66.66666667,2,66.66666667,0
+Familial cancer of breast,13,32379800,G,A,rs80359152,8,4,50,0,0,50
+Familial cancer of breast,17,43091924,G,A,rs62625308,2,1,50,0,0,50
+Familial cancer of breast,17,43106457,T,C,rs80357382,3,1,33.33333333,1,33.33333333,0
+Familial cancer of breast,17,35103298,G,A,rs587780104,4,1,25,1,25,0
+Familial cancer of breast,13,32338277,G,T,rs80358638,32,4,12.5,4,12.5,0
+Familial cancer of breast,11,108332886,G,A,rs377349459,16,2,12.5,2,12.5,0
+Familial cancer of breast,15,40718818,G,A,rs121917739,109,6,5.504587156,4,3.669724771,1.834862385
+Familial cancer of breast,11,108310305,C,T,rs587781722,20,0,0,0,0,0
+Familial cancer of breast,12,25245350,C,T,rs121913529,8,0,0,0,0,0
+Familial cancer of breast,13,32331009,C,T,rs80358998,8,0,0,0,0,0
+Familial cancer of breast,13,32340392,A,T,rs80358840,8,0,0,0,0,0
+Familial cancer of breast,13,32356463,C,T,rs80358971,8,0,0,0,0,0
+Familial cancer of breast,13,32356472,C,T,rs80358972,8,0,0,0,0,0
+Familial cancer of breast,13,32356550,C,T,rs80358981,8,0,0,0,0,0
+Familial cancer of breast,13,32380085,C,T,rs80359180,8,0,0,0,0,0
+Familial cancer of breast,17,7673776,G,C,rs28934574,8,0,0,0,0,0
+Familial cancer of breast,17,7673802,C,T,rs28934576,8,0,0,0,0,0
+Familial cancer of breast,17,7675088,C,T,rs28934578,8,0,0,8,100,100
+Familial cancer of breast,17,7675139,C,T,rs587782144,8,0,0,0,0,0
+Familial cancer of breast,11,108335959,A,T,rs371638537,4,0,0,0,0,0
+Familial cancer of breast,11,108345818,C,T,rs587779872,4,0,0,0,0,0
+Familial cancer of breast,11,108345829,C,A,rs587781597,4,0,0,0,0,0
+Familial cancer of breast,13,32319298,G,T,rs397507646,4,0,0,0,0,0
+Familial cancer of breast,13,32340128,C,T,rs80358806,4,0,0,0,0,0
+Familial cancer of breast,13,32340212,G,T,rs80358814,4,0,0,0,0,0
+Familial cancer of breast,13,32379913,G,A,rs28897756,4,0,0,4,100,100
+Familial cancer of breast,13,32394814,C,T,rs80359212,4,0,0,0,0,0
+Familial cancer of breast,16,23621362,C,T,rs180177132,4,0,0,0,0,0
+Familial cancer of breast,2,214730491,G,A,rs587781948,3,0,0,0,0,0
+Familial cancer of breast,17,43051071,A,C,rs41293463,3,0,0,0,0,0
+Familial cancer of breast,17,58724090,C,T,rs587781287,3,0,0,0,0,0
+Familial cancer of breast,11,108227806,C,T,rs55861249,2,0,0,0,0,0
+Familial cancer of breast,11,108249102,G,A,rs587779813,2,0,0,0,0,0
+Familial cancer of breast,11,108250804,C,T,rs587779815,2,0,0,0,0,0
+Familial cancer of breast,11,108256340,G,A,rs1137887,2,0,0,0,0,0
+Familial cancer of breast,11,108271378,C,T,rs730881388,2,0,0,2,100,100
+Familial cancer of breast,11,108295002,C,T,rs762083530,2,0,0,0,0,0
+Familial cancer of breast,11,108329027,G,T,rs587781672,2,0,0,0,0,0
+Familial cancer of breast,11,108329202,T,G,rs28904921,2,0,0,0,0,0
+Familial cancer of breast,11,108335105,T,C,rs587782652,2,0,0,0,0,0
+Familial cancer of breast,11,108335878,C,T,rs587781967,2,0,0,0,0,0
+Familial cancer of breast,11,108365359,C,T,rs587782292,2,0,0,0,0,0
+Familial cancer of breast,16,23607958,G,A,rs587776527,2,0,0,0,0,0
+Familial cancer of breast,16,23634913,C,A,rs180177103,2,0,0,0,0,0
+Familial cancer of breast,16,23636122,T,A,rs587782005,2,0,0,0,0,0
+Familial cancer of breast,17,35106406,G,A,rs387906843,2,0,0,0,0,0
+Familial cancer of breast,17,61685976,A,C,rs587782410,2,0,0,0,0,0
+Familial cancer of breast,17,61780325,G,T,rs587781321,2,0,0,0,0,0
+Familial cancer of breast,2,214780658,G,A,rs377153250,1,0,0,0,0,0
+Familial cancer of breast,2,214792327,G,A,rs758972589,1,0,0,0,0,0
+Familial cancer of breast,17,43063903,G,T,rs28897696,1,0,0,0,0,0
+Familial cancer of breast,17,43063917,A,C,rs80356974,1,0,0,0,0,0
+Familial cancer of breast,17,43093496,T,A,rs80357082,1,0,0,0,0,0
+Familial cancer of breast,17,43094018,T,A,rs397508877,1,0,0,0,0,0
+Familial cancer of breast,17,43106478,A,C,rs80357064,1,0,0,0,0,0
+Familial cancer of breast,17,43115744,C,T,rs80357498,1,0,0,0,0,0
+Familial cancer of breast,17,58692740,C,T,rs587782528,1,0,0,0,0,0
+Familial cancer of breast,17,61780893,G,A,rs780020495,1,0,0,0,0,0
+Familial cancer of breast,17,61799125,G,A,rs587780226,1,0,0,0,0,0
+Familial cancer of breast,17,61849152,G,A,rs747604569,1,0,0,0,0,0
+Familial cancer of breast,17,61849173,G,A,rs587781786,1,0,0,0,0,0

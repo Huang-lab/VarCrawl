@@ -5,20 +5,16 @@ import type { Assembly } from "@/lib/hgvs/types";
 
 interface Props {
   onSearch: (query: string, assembly: Assembly) => void;
-  disabled: boolean;
+  loading: boolean;
+  initialQuery?: string;
+  initialAssembly?: Assembly;
 }
 
-const EXAMPLES = [
-  "BRAF p.V600E",
-  "NM_004333.6:c.1799T>A",
-  "chr7:g.140753336A>T",
-  "rs113488022",
-  "KRAS G12D",
-];
+const EXAMPLES = ["CFH p.R1210C", "BRAF p.V600E", "KRAS p.G12D", "TP53 p.R175H", "APOB p.R3527Q"];
 
-export function SearchForm({ onSearch, disabled }: Props) {
-  const [query, setQuery] = useState("");
-  const [assembly, setAssembly] = useState<Assembly>("GRCh38");
+export function SearchForm({ onSearch, loading, initialQuery, initialAssembly }: Props) {
+  const [query, setQuery] = useState(initialQuery ?? "");
+  const [assembly, setAssembly] = useState<Assembly>(initialAssembly ?? "GRCh38");
 
   return (
     <>
@@ -31,23 +27,29 @@ export function SearchForm({ onSearch, disabled }: Props) {
       >
         <input
           type="text"
-          placeholder="e.g. BRAF p.V600E"
+          placeholder="rsID, HGVS, or gene + change (e.g. rs80359550, BRAF p.V600E)"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoFocus
-          disabled={disabled}
+          onFocus={(e) => e.target.select()}
+          aria-label="Variant"
         />
         <select
           value={assembly}
           onChange={(e) => setAssembly(e.target.value as Assembly)}
-          disabled={disabled}
           aria-label="Genome assembly"
         >
           <option value="GRCh38">GRCh38 / hg38</option>
           <option value="GRCh37">GRCh37 / hg19</option>
         </select>
-        <button type="submit" disabled={disabled || !query.trim()}>
-          Search PubMed
+        <button type="submit" disabled={loading || !query.trim()} aria-busy={loading}>
+          {loading ? (
+            <>
+              <span className="btn-spinner" aria-hidden="true" /> Searching
+            </>
+          ) : (
+            "Search"
+          )}
         </button>
       </form>
       <p className="examples">
@@ -55,7 +57,12 @@ export function SearchForm({ onSearch, disabled }: Props) {
         {EXAMPLES.map((ex, i) => (
           <span key={ex}>
             {i > 0 && " "}
-            <code onClick={() => setQuery(ex)}>{ex}</code>
+            <button type="button" className="example-chip" onClick={() => {
+                setQuery(ex);
+                onSearch(ex, assembly);
+              }}>
+              {ex}
+            </button>
           </span>
         ))}
       </p>
