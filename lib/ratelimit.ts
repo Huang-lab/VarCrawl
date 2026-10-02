@@ -13,12 +13,13 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import type { NextRequest } from "next/server";
+import { envNumber } from "@/lib/entrez/scheduler";
 
 const enabled = !!(
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
 );
 
-const max = Number(process.env.RATE_LIMIT_MAX ?? 20);
+const max = envNumber("RATE_LIMIT_MAX", 20);
 const windowStr = (process.env.RATE_LIMIT_WINDOW ?? "60 s") as `${number} ${
   | "ms"
   | "s"

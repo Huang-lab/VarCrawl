@@ -75,7 +75,15 @@ export function enumerateGrouped(v: CanonicalVariant): VariantGroups {
 
   // --- Per-transcript consequences ---
   // Defer dedupe so MANE-Select groups get first pick of shared strings.
-  const pending: { group: TranscriptGroup; rank: number }[] = [];
+  //
+  // Each pending entry keeps a direct reference to the consequence it was built
+  // from. Re-finding it by transcript id after the sort would misattribute
+  // whenever two consequences share a transcript id or both lack one (VEP omits
+  // it for some consequence types): `find` returns the first match, so one
+  // consequence would be enumerated twice while another was never enumerated
+  // at all — and dedupe then drops the emptied group, silently losing its
+  // variant strings from the search.
+  const pending: { group: TranscriptGroup; consequence: Consequence; rank: number }[] = [];
   for (const c of v.consequences) {
     const isManeSelect = !!c.maneSelect;
     const isManePlusClinical = !!c.manePlusClinical;
@@ -93,14 +101,13 @@ export function enumerateGrouped(v: CanonicalVariant): VariantGroups {
       variants: [],
     };
     const rank = isManeSelect ? 0 : isManePlusClinical ? 1 : c.canonical ? 2 : 3;
-    pending.push({ group, rank });
+    pending.push({ group, consequence: c, rank });
   }
-  // Sort: MANE Select → MANE Plus Clinical → canonical → others
+  // Sort: MANE Select → MANE Plus Clinical → canonical → others.
+  // Array.prototype.sort is stable, so equal ranks keep VEP's ordering.
   pending.sort((a, b) => a.rank - b.rank);
-  for (const { group } of pending) {
-    const c = v.consequences.find((x) => x.transcript === group.transcript);
-    if (!c) continue;
-    enumerateConsequence(c, group.variants, dedupe);
+  for (const { group, consequence } of pending) {
+    enumerateConsequence(consequence, group.variants, dedupe);
     if (group.variants.length > 0) perTranscript.push(group);
   }
 

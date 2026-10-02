@@ -38,6 +38,24 @@ Open <http://localhost:3000>.
 
 ## API
 
+### `POST /api/search`
+
+```json
+{ "query": "BRAF p.V600E", "assembly": "GRCh38" }
+```
+
+Expands the mutation and searches every source in a single request, returning
+the expansion (`classified`, `canonical`, `groups`, `variants`), the phrase
+lists actually searched (`searchTerms`), and both result sets (`pubmed`,
+`clinvar`). This is what the UI calls.
+
+Doing all of it in one request is what makes the PubMed and ClinVar searches
+safe to run concurrently: they share this process's Entrez rate limiter. Split
+across separate HTTP requests they can land on different serverless instances,
+each assuming the whole NCBI quota.
+
+The endpoints below remain available for programmatic use.
+
 ### `POST /api/expand`
 
 ```json
@@ -91,9 +109,25 @@ by clinical significance (Pathogenic → Likely Pathogenic → VUS → …).
   - Applies gene/protein-form filtering to reduce off-target records.
   - Sorts by clinical significance priority.
 
-6. **Resilience controls (`lib/ratelimit.ts`, `lib/cache.ts`)**
+6. **Upstream pacing (`lib/entrez/scheduler.ts`)**
+  - Every outbound Entrez / Europe PMC call passes through a token-bucket
+    limiter with a concurrency ceiling, shared process-wide so that the PubMed
+    and ClinVar searches draw on one budget.
+  - Tokens accrue at the published rate while several requests stay in flight,
+    so round-trip latency overlaps instead of accumulating across the ~50
+    representations a search expands into.
+  - A retry waits for its own token before going out, so a burst of retries
+    during an upstream wobble cannot push the rate over the limit. It waits on
+    a token only, never a second concurrency slot, since it already holds one.
+  - An upstream `Retry-After` is honoured up to a ceiling: NCBI can ask for
+    longer than the whole function budget, and waiting that long guarantees the
+    caller gets nothing rather than a partial result.
+
+7. **Resilience controls (`lib/ratelimit.ts`, `lib/cache.ts`)**
   - Per-client rate limiting (optional Upstash Redis).
   - Response caching (optional Upstash Redis) for repeated variant lookups.
+  - Per-request timeouts, so one hung upstream call cannot consume the whole
+    serverless function budget.
   - Source diagnostics mark likely partial/rate-limited upstream retrievals.
 
 ## Penetrance and literature in one search
@@ -102,11 +136,41 @@ One search box takes an rsID, HGVS, or gene + change.
 The result page shows a summary (variant, penetrance, ClinVar, literature count), then a penetrance card with 100-person icon arrays for ICD-10 and clinical algorithm definitions, then ClinVar and PubMed/Europe PMC results.
 Penetrance is matched by rsID, or by GRCh38 position.
 Each estimate has a 95% Wilson confidence range, and variants with fewer than 30 carriers are flagged.
-With no search, the page lets you browse the dataset by condition.
 
 Data is bundled in `public/data/etable4_penetrance.csv` (lifetime penetrance, all ages) and you can upload your own CSV with the same columns.
 Add an `Age` column to provide age-specific data: rows sharing a variant form a cumulative penetrance curve, and the card shows an age slider and chart.
 The "Demo: age-specific" dataset is synthetic and illustrative only.
+
+## Performance
+
+A search over the full 50-representation budget issues ~110 NCBI requests plus
+~50 to Europe PMC. Running those serially with a fixed pause between each — one
+request in flight at a time — achieved roughly 2.5 req/s of NCBI's 10 req/s
+allowance, because the round-trip, not the quota, set the pace. A common query
+took most of the 60s function ceiling and any upstream slowness pushed it over.
+
+Against a simulated upstream at a 300ms round-trip
+(`tests/search-throughput.test.ts`), the same work now completes in ~14s
+instead of ~45s, with a measured peak of 10 req/s — NCBI's documented ceiling
+with an API key, and no higher. The rate holds under failure too: with every
+phrase returning 503 and each retrying twice, the measured peak is 9 req/s.
+
+A partial or rate-limited result is cached for a minute rather than six hours,
+so the retry its status message advises actually reaches NCBI again.
+
+Note the scope of that guarantee: the limiter is per server instance, and
+NCBI's quota is per API key. A deployment running several instances
+concurrently can still exceed the rate in aggregate, so the defaults leave
+headroom and `Retry-After` on a 429 remains the backstop.
+
+## Sharing and export
+
+- Searches are deep-linkable: `/?q=BRAF%20p.V600E&assembly=GRCh38` reruns the
+  search on load, and browser back/forward moves between searches.
+- Results export to CSV — articles, ClinVar records, and the full list of
+  searched representations — for supplementary tables. Fields are quoted per
+  RFC 4180 and values beginning `=`, `+`, `-` or `@` are prefixed so a
+  spreadsheet reads them as text rather than formulas.
 
 ## Testing
 
@@ -114,9 +178,14 @@ The "Demo: age-specific" dataset is synthetic and illustrative only.
 pnpm test
 ```
 
-Vitest unit tests cover the input classifier and variant enumerator. The
-upstream-dependent parts (`lib/hgvs/convert.ts`, `lib/pubmed/entrez.ts`) are
-integration-tested end-to-end via the verification flow in the plan file.
+Vitest covers the input classifier, the variant enumerator (including
+consequence attribution when VEP returns duplicate or missing transcript ids),
+search-term construction, CSV export, the cache wrapper, the rate limiter, and
+an end-to-end throughput test that asserts both the latency budget and rate
+compliance against a simulated upstream.
+
+`lib/hgvs/convert.ts` still depends on live Ensembl VEP and is exercised
+manually.
 
 ## Deployment (Vercel)
 

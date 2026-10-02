@@ -13,7 +13,8 @@ import {
   EntrezConfig,
   EntrezDiagnostics,
   baseParams,
-  delayMs,
+  entrezFetchText,
+  esearchTermWithStatus,
   esummaryBatchWithDiagnostics,
   searchPhrasesInDbWithDiagnostics,
 } from "@/lib/entrez/base";
@@ -56,21 +57,82 @@ interface ClinvarDocsum {
   traits?: { trait_name?: string }[];
 }
 
+export interface ClinvarSearchOptions {
+  /** Gene symbol from the classified input or canonical variant. */
+  gene?: string;
+  /**
+   * Protein forms (1-letter and 3-letter, with/without `p.` prefix) used to
+   * construct a structured ClinVar query like `BRAF[gene] AND (V600E OR ...)`.
+   * This catches records the plain-phrase esearch misses because ClinVar's
+   * All-Fields index doesn't treat "BRAF V600E" as a variant phrase.
+   */
+  proteinForms?: string[];
+}
+
 export async function searchClinvarForVariants(
   variants: string[],
   cfg: EntrezConfig,
+  opts?: ClinvarSearchOptions,
 ): Promise<ClinvarRecord[]> {
-  const res = await searchClinvarForVariantsDetailed(variants, cfg);
+  const res = await searchClinvarForVariantsDetailed(variants, cfg, opts);
   return res.records;
 }
 
 export async function searchClinvarForVariantsDetailed(
   variants: string[],
   cfg: EntrezConfig,
+  opts?: ClinvarSearchOptions,
 ): Promise<ClinvarSearchResult> {
   /* ── 1. Existing esearch path (unchanged) ── */
   const phraseRes = await searchPhrasesInDbWithDiagnostics("clinvar", variants, cfg);
   const matched = phraseRes.matched;
+
+  /* ── 1b. Targeted gene + protein-form query ──
+   * ClinVar's `"phrase"[All Fields]` index doesn't recognize compound strings
+   * like "BRAF V600E" (the 1-letter form rarely appears in indexed titles).
+   * A structured query `BRAF[gene] AND (V600E OR Val600Glu OR "p.Val600Glu")`
+   * mirrors how the ClinVar web UI resolves gene+variant queries and reliably
+   * returns records such as VCV000013961. Best-effort — failures are ignored.
+   */
+  if (opts?.gene && opts.proteinForms && opts.proteinForms.length > 0) {
+    const tag = `${opts.gene} ${shortestProteinForm(opts.proteinForms)}`;
+    let primaryIdCount = 0;
+    const term = buildGeneProteinQuery(opts.gene, opts.proteinForms);
+    if (term) {
+      const res = await esearchTermWithStatus("clinvar", term, cfg);
+      if (res.ok) {
+        primaryIdCount = res.ids.length;
+        for (const id of res.ids) {
+          if (!matched.has(id)) matched.set(id, new Set());
+          matched.get(id)!.add(tag);
+        }
+      }
+    }
+
+    /* ── 1c. Per-form fallback queries ──
+     * NCBI's esearch parser can silently drop the big mixed-quote OR query
+     * above (e.g. when `"p.Val600Glu"` tokenizes oddly). Run simple
+     * `GENE[gene] AND FORM` terms one-by-one as a safety net. 3-letter forms
+     * run first because ClinVar's indexed titles carry them. Short-circuit
+     * the moment any term returns at least one hit.
+     */
+    if (primaryIdCount === 0) {
+      // Sequential and short-circuiting by design: each query is a fallback
+      // for the previous one, so we stop at the first that returns anything
+      // rather than spending quota on all of them.
+      for (const fallback of buildGeneProteinQueries(opts.gene, opts.proteinForms)) {
+        const res = await esearchTermWithStatus("clinvar", fallback, cfg);
+        if (res.ok && res.ids.length > 0) {
+          for (const id of res.ids) {
+            if (!matched.has(id)) matched.set(id, new Set());
+            matched.get(id)!.add(tag);
+          }
+          break;
+        }
+      }
+    }
+  }
+
   const allIds = Array.from(matched.keys());
 
   let records: ClinvarRecord[] = [];
@@ -169,30 +231,36 @@ async function elinkClinvarRecords(
   rsIds: { variant: string; rsNum: number }[],
   cfg: EntrezConfig,
 ): Promise<ClinvarRecord[]> {
-  const d = delayMs(cfg);
+  // 1. elink: dbSNP → ClinVar, one call per rsID so we can attribute matchedBy.
+  //    These are independent, so they overlap. `entrezFetchText` takes its own
+  //    rate-limit slot, so plain Promise.all is what we want here — wrapping it
+  //    in mapWithLimiter would hold an outer slot while waiting for an inner
+  //    one and deadlock once the rsID count reached the concurrency ceiling.
+  const xmls = await Promise.all(
+    rsIds.map(({ rsNum }) => {
+      const params = baseParams(cfg);
+      params.set("dbfrom", "snp");
+      params.set("db", "clinvar");
+      params.set("id", String(rsNum));
+      params.set("retmode", "xml");
+      return entrezFetchText(`${EUTILS}/elink.fcgi?${params.toString()}`, cfg);
+    }),
+  );
 
-  // 1. elink: dbSNP → ClinVar (one call per rsID to track matchedBy)
+  // Fold in rsID order so a variation ID linked from several rsIDs is
+  // attributed deterministically.
   const varIdToRsVariant = new Map<number, string>();
-  for (const { variant, rsNum } of rsIds) {
-    const params = baseParams(cfg);
-    params.set("dbfrom", "snp");
-    params.set("db", "clinvar");
-    params.set("id", String(rsNum));
-    params.set("retmode", "xml");
-    const url = `${EUTILS}/elink.fcgi?${params.toString()}`;
-    const res = await fetch(url);
-    if (!res.ok) continue;
-    const xml = await res.text();
+  for (let i = 0; i < xmls.length; i++) {
+    const xml = xmls[i];
+    if (!xml) continue;
+    const variant = rsIds[i].variant;
     // Extract <Id> elements inside <LinkSetDb> (they are variation IDs)
-    const lsdb = xml.match(/<LinkSetDb>[\s\S]*?<\/LinkSetDb>/g);
-    if (lsdb) {
-      for (const block of lsdb) {
-        for (const m of block.matchAll(/<Id>(\d+)<\/Id>/g)) {
-          varIdToRsVariant.set(Number(m[1]), variant);
-        }
+    for (const block of xml.match(/<LinkSetDb>[\s\S]*?<\/LinkSetDb>/g) ?? []) {
+      for (const m of block.matchAll(/<Id>(\d+)<\/Id>/g)) {
+        const id = Number(m[1]);
+        if (!varIdToRsVariant.has(id)) varIdToRsVariant.set(id, variant);
       }
     }
-    await new Promise((r) => setTimeout(r, d));
   }
 
   if (varIdToRsVariant.size === 0) return [];
@@ -204,10 +272,11 @@ async function elinkClinvarRecords(
   params.set("rettype", "vcv");
   params.set("id", variationIds.join(","));
   // is_variationid is a flag (no value) telling ClinVar the IDs are variation IDs
-  const url = `${EUTILS}/efetch.fcgi?${params.toString()}&is_variationid`;
-  const res = await fetch(url);
-  if (!res.ok) return [];
-  const xml = await res.text();
+  const xml = await entrezFetchText(
+    `${EUTILS}/efetch.fcgi?${params.toString()}&is_variationid`,
+    cfg,
+  );
+  if (!xml) return [];
 
   // 3. Parse each <VariationArchive> element
   return parseVcvXml(xml, varIdToRsVariant);
@@ -328,6 +397,77 @@ function decodeXmlEntities(s: string): string {
     .replace(/&#x([0-9a-fA-F]+);/g, (_, h) =>
       String.fromCharCode(parseInt(h, 16)),
     );
+}
+
+/**
+ * Build a ClinVar esearch term that combines the gene field with any of the
+ * accepted protein forms, e.g. `BRAF[gene] AND (V600E OR Val600Glu)`.
+ *
+ * Forms containing non-word characters (e.g. "p.Val600Glu") are quoted so
+ * NCBI's tokenizer keeps them as a single token. Returns an empty string if
+ * no usable forms remain.
+ */
+export function buildGeneProteinQuery(gene: string, proteinForms: string[]): string {
+  const g = gene.trim();
+  if (!g) return "";
+  const seen = new Set<string>();
+  const terms: string[] = [];
+  for (const raw of proteinForms) {
+    if (!raw) continue;
+    const f = raw.trim();
+    if (!f) continue;
+    const key = f.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    // Quote forms that contain characters the NCBI tokenizer breaks on.
+    const token = /^[A-Za-z0-9]+$/.test(f) ? f : `"${f.replace(/"/g, "")}"`;
+    terms.push(token);
+  }
+  if (terms.length === 0) return "";
+  return `${g}[gene] AND (${terms.join(" OR ")})`;
+}
+
+/**
+ * Build a prioritized list of simple structured ClinVar queries as a fallback
+ * for when the big `AND (form OR form OR ...)` query fails to resolve. Each
+ * term is a single `GENE[gene] AND TOKEN` pair — no quotes, no dots, no OR —
+ * which NCBI's esearch parser handles reliably. 3-letter forms are preferred
+ * because ClinVar's indexed record titles carry them (e.g. p.Val600Glu).
+ *
+ * Capped at 4 terms to keep the Entrez call count bounded.
+ */
+export function buildGeneProteinQueries(gene: string, proteinForms: string[]): string[] {
+  const g = gene.trim();
+  if (!g) return [];
+  const seen = new Set<string>();
+  const clean: string[] = [];
+  for (const raw of proteinForms) {
+    if (!raw) continue;
+    const bare = raw.trim().replace(/^p\./i, "");
+    if (!bare) continue;
+    // Skip anything that would need quoting in the NCBI term — we want the
+    // simplest possible token so the parser can't misinterpret it.
+    if (!/^[A-Za-z0-9]+$/.test(bare)) continue;
+    const key = bare.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    clean.push(bare);
+  }
+  // Prefer 3-letter AA forms (e.g. Val600Glu) over 1-letter (V600E) because
+  // ClinVar record titles contain the 3-letter form.
+  const is3Letter = (f: string) => /^[A-Z][a-z]{2}\d+[A-Z][a-z]{2}$/.test(f);
+  clean.sort((a, b) => Number(is3Letter(b)) - Number(is3Letter(a)));
+  const top = clean.slice(0, 2);
+  const out: string[] = [];
+  for (const f of top) out.push(`${g}[gene] AND ${f}`);
+  for (const f of top) out.push(`${g}[gene] AND ${f}[All Fields]`);
+  return out;
+}
+
+function shortestProteinForm(forms: string[]): string {
+  const usable = forms.filter((f) => f && f.trim().length > 0);
+  if (usable.length === 0) return "";
+  return [...usable].sort((a, b) => a.length - b.length)[0];
 }
 
 function normalizeConditionStrings(values: string[]): string[] {

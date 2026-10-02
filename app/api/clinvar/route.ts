@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchClinvarForVariantsDetailed } from "@/lib/clinvar/entrez";
-import { filterClinvarRecords } from "@/lib/clinvar/filter";
 import { cacheGet, cacheSet, hash } from "@/lib/cache";
 import { checkRateLimit } from "@/lib/ratelimit";
+import { rateLimitedStatus } from "@/lib/search/results";
+import { entrezConfigFromEnv, runClinvarSearch } from "@/lib/search/run";
+import { MAX_SEARCH_TERMS, normalizeTerms } from "@/lib/search/terms";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -19,53 +20,11 @@ interface Body {
   proteinForms?: string[];
 }
 
-interface SourceStatus {
-  complete: boolean;
-  likelyRateLimited: boolean;
-  likelyPartial: boolean;
-  message?: string;
-}
-
-function buildStatusFromDiagnostics(diag: {
-  likelyPartial: boolean;
-  likelyRateLimited: boolean;
-}): SourceStatus {
-  if (diag.likelyRateLimited) {
-    return {
-      complete: false,
-      likelyRateLimited: true,
-      likelyPartial: true,
-      message: "ClinVar may be incomplete due to NCBI rate limiting. Please retry shortly.",
-    };
-  }
-  if (diag.likelyPartial) {
-    return {
-      complete: false,
-      likelyRateLimited: false,
-      likelyPartial: true,
-      message: "ClinVar may be incomplete due to temporary upstream errors.",
-    };
-  }
-  return {
-    complete: true,
-    likelyRateLimited: false,
-    likelyPartial: false,
-  };
-}
-
 export async function POST(req: NextRequest) {
   const rl = await checkRateLimit(req);
   if (rl && !rl.success) {
     return NextResponse.json(
-      {
-        error: "Rate limit exceeded",
-        status: {
-          complete: false,
-          likelyRateLimited: true,
-          likelyPartial: true,
-          message: "ClinVar request blocked by server rate limit. Retry later.",
-        },
-      },
+      { error: "Rate limit exceeded", status: rateLimitedStatus("ClinVar", rl.retryAfterSec) },
       { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
     );
   }
@@ -78,16 +37,22 @@ export async function POST(req: NextRequest) {
   }
 
   if (!Array.isArray(body.variants) || body.variants.length === 0) {
-    return NextResponse.json({ error: "'variants' must be a non-empty string array" }, { status: 400 });
+    return NextResponse.json(
+      { error: "'variants' must be a non-empty string array" },
+      { status: 400 },
+    );
   }
 
-  const variants = body.variants
-    .map((v) => (typeof v === "string" ? v.trim() : ""))
-    .filter((v) => v.length > 0)
-    .filter((v, i, arr) => arr.indexOf(v) === i)
-    .slice(0, 50);
+  const variants = normalizeTerms(body.variants, MAX_SEARCH_TERMS);
+  if (variants.length === 0) {
+    return NextResponse.json(
+      { error: "'variants' must contain at least one non-empty string" },
+      { status: 400 },
+    );
+  }
 
-  const gene = typeof body.gene === "string" && body.gene.trim() ? body.gene.trim() : undefined;
+  const gene =
+    typeof body.gene === "string" && body.gene.trim() ? body.gene.trim() : undefined;
   const proteinForms = Array.isArray(body.proteinForms)
     ? body.proteinForms.filter((f): f is string => typeof f === "string" && f.length > 0)
     : [];
@@ -96,23 +61,10 @@ export async function POST(req: NextRequest) {
   const cached = await cacheGet<unknown>(cacheKey);
   if (cached) return NextResponse.json(cached);
 
-  const cfg = {
-    apiKey: process.env.NCBI_API_KEY,
-    email: process.env.NCBI_EMAIL,
-    tool: "varcrawl",
-  };
-
-  const searchRes = await searchClinvarForVariantsDetailed(variants, cfg);
-  const all = searchRes.records;
-  const { kept } = filterClinvarRecords(all, { gene, proteinForms });
-  const resp = {
-    count: kept.length,
-    unfilteredCount: all.length,
+  const resp = await runClinvarSearch(variants, entrezConfigFromEnv(), {
     gene,
     proteinForms,
-    status: buildStatusFromDiagnostics(searchRes.diagnostics),
-    records: kept,
-  };
+  });
   await cacheSet(cacheKey, resp, 3600 * 6);
   return NextResponse.json(resp);
 }

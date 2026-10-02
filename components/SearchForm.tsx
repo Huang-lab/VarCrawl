@@ -1,21 +1,34 @@
 "use client";
 
-import { useState } from "react";
 import type { Assembly } from "@/lib/hgvs/types";
 
 interface Props {
+  /**
+   * Controlled inputs. The page owns these and keeps them in step with the
+   * URL, so a shared link, a typed query and a back/forward navigation all
+   * agree on what is being searched. Mirroring the URL into local state here
+   * let the two drift: navigating back to a search on a different genome build
+   * left the dropdown showing the build from the previous search, labelling the
+   * displayed coordinates with the wrong assembly.
+   */
+  query: string;
+  assembly: Assembly;
+  onQueryChange: (query: string) => void;
+  onAssemblyChange: (assembly: Assembly) => void;
   onSearch: (query: string, assembly: Assembly) => void;
-  loading: boolean;
-  initialQuery?: string;
-  initialAssembly?: Assembly;
+  disabled: boolean;
 }
 
 const EXAMPLES = ["CFH p.R1210C", "BRAF p.V600E", "KRAS p.G12D", "TP53 p.R175H", "APOB p.R3527Q"];
 
-export function SearchForm({ onSearch, loading, initialQuery, initialAssembly }: Props) {
-  const [query, setQuery] = useState(initialQuery ?? "");
-  const [assembly, setAssembly] = useState<Assembly>(initialAssembly ?? "GRCh38");
-
+export function SearchForm({
+  query,
+  assembly,
+  onQueryChange,
+  onAssemblyChange,
+  onSearch,
+  disabled,
+}: Props) {
   return (
     <>
       <form
@@ -29,21 +42,23 @@ export function SearchForm({ onSearch, loading, initialQuery, initialAssembly }:
           type="text"
           placeholder="rsID, HGVS, or gene + change (e.g. rs80359550, BRAF p.V600E)"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          autoFocus
+          onChange={(e) => onQueryChange(e.target.value)}
           onFocus={(e) => e.target.select()}
           aria-label="Variant"
+          autoFocus
+          disabled={disabled}
         />
         <select
           value={assembly}
-          onChange={(e) => setAssembly(e.target.value as Assembly)}
+          onChange={(e) => onAssemblyChange(e.target.value as Assembly)}
+          disabled={disabled}
           aria-label="Genome assembly"
         >
           <option value="GRCh38">GRCh38 / hg38</option>
           <option value="GRCh37">GRCh37 / hg19</option>
         </select>
-        <button type="submit" disabled={loading || !query.trim()} aria-busy={loading}>
-          {loading ? (
+        <button type="submit" disabled={disabled || !query.trim()} aria-busy={disabled}>
+          {disabled ? (
             <>
               <span className="btn-spinner" aria-hidden="true" /> Searching
             </>
@@ -57,10 +72,15 @@ export function SearchForm({ onSearch, loading, initialQuery, initialAssembly }:
         {EXAMPLES.map((ex, i) => (
           <span key={ex}>
             {i > 0 && " "}
-            <button type="button" className="example-chip" onClick={() => {
-                setQuery(ex);
+            <button
+              type="button"
+              className="example-chip"
+              disabled={disabled}
+              onClick={() => {
+                onQueryChange(ex);
                 onSearch(ex, assembly);
-              }}>
+              }}
+            >
               {ex}
             </button>
           </span>
