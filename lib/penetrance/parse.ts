@@ -5,11 +5,12 @@ import type { AgePoint, PenetranceDataset, PenetranceRecord } from "./types";
  * Accepted columns (case-insensitive, matched by prefix):
  *   Disease, CHR, POS, REF, ALT, rsID,
  *   "Individuals with variants, n",
- *   "ICD-10 affected individuals with variants, n",
- *   "Clinical algorithm affected individuals with variants, n"
+ *   "ICD-10 affected individuals with variants, n"
  * Optional: "Age" - when present, rows sharing a variant are treated as one
  * cumulative-penetrance-by-age curve; the oldest age row gives the lifetime value and carrier count.
- * Penetrance % columns are ignored and recomputed from counts.
+ * Penetrance % columns are ignored and recomputed from counts. Other measures
+ * (such as the clinical algorithm column of eTable 4) are ignored: only ICD-10
+ * diagnoses are used.
  */
 const COLS = {
   disease: /^disease$/,
@@ -20,7 +21,6 @@ const COLS = {
   rsid: /^rsid/,
   carriers: /^individuals with variants/,
   icd10: /^icd-?10 affected/,
-  algorithm: /^clinical algorithm affected/,
   age: /^age/,
 } as const;
 
@@ -53,7 +53,7 @@ export function parsePenetranceCsv(
   }
 
   const cols = findColumns(rows[0]);
-  const required: ColKey[] = ["disease", "chr", "pos", "ref", "alt", "carriers", "icd10", "algorithm"];
+  const required: ColKey[] = ["disease", "chr", "pos", "ref", "alt", "carriers", "icd10"];
   const missing = required.filter((k) => cols[k] === undefined);
   if (missing.length > 0) {
     return { ...meta, records: [], warnings: [`Missing required column(s): ${missing.join(", ")}.`] };
@@ -66,10 +66,9 @@ export function parsePenetranceCsv(
   rows.slice(1).forEach((r, idx) => {
     const carriers = num(cell(r, "carriers"));
     const icd = num(cell(r, "icd10"));
-    const alg = num(cell(r, "algorithm"));
     const pos = num(cell(r, "pos"));
     const disease = cell(r, "disease");
-    const validCounts = [carriers, icd, alg].every((v) => Number.isFinite(v) && v >= 0) && icd <= carriers && alg <= carriers;
+    const validCounts = [carriers, icd].every((v) => Number.isFinite(v) && v >= 0) && icd <= carriers;
     if (!disease || !Number.isFinite(pos) || !validCounts) {
       skipped++;
       if (skipped <= 3) warnings.push(`Row ${idx + 2} skipped: missing or inconsistent values.`);
@@ -102,13 +101,13 @@ export function parsePenetranceCsv(
         alt,
         rsid: /^rs\d+$/i.test(cell(r, "rsid")) ? cell(r, "rsid") : undefined,
         carriers,
-        icd10: { affected: icd, pct: pct(icd, carriers) },
-        algorithm: { affected: alg, pct: pct(alg, carriers) },
+        affected: icd,
+        pct: pct(icd, carriers),
       };
       byId.set(id, rec);
     }
     if (age !== undefined) {
-      const point: AgePoint = { age, icd10: pct(icd, carriers), algorithm: pct(alg, carriers), carriers };
+      const point: AgePoint = { age, pct: pct(icd, carriers), carriers };
       rec.ages = [...(rec.ages ?? []), point];
     }
   });
@@ -120,8 +119,8 @@ export function parsePenetranceCsv(
     const last = rec.ages[rec.ages.length - 1];
     // Lifetime figures come from the oldest age row, including its carrier count.
     rec.carriers = last.carriers ?? rec.carriers;
-    rec.icd10 = { affected: Math.round((last.icd10 / 100) * rec.carriers), pct: last.icd10 };
-    rec.algorithm = { affected: Math.round((last.algorithm / 100) * rec.carriers), pct: last.algorithm };
+    rec.affected = Math.round((last.pct / 100) * rec.carriers);
+    rec.pct = last.pct;
   }
 
   if (skipped > 3) warnings.push(`${skipped} rows skipped in total.`);

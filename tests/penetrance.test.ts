@@ -2,7 +2,16 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { parseCsv } from "@/lib/penetrance/csv";
 import { parsePenetranceCsv } from "@/lib/penetrance/parse";
-import { iconFills, penetranceAtAge, wilsonInterval, formatPct } from "@/lib/penetrance/stats";
+import {
+  compareToBaseline,
+  formatPct,
+  formatRate,
+  iconFills,
+  oneInPhrase,
+  penetranceAtAge,
+  wilsonInterval,
+} from "@/lib/penetrance/stats";
+import { baselineFor } from "@/lib/penetrance/baseline";
 import { makeDemoDataset } from "@/lib/penetrance/demo";
 
 const META = { id: "t", label: "t", description: "t" };
@@ -24,13 +33,21 @@ describe("parsePenetranceCsv", () => {
     expect(ds.records).toHaveLength(237);
     const top = ds.records.find((r) => r.rsid === "rs201672011")!;
     expect(top.carriers).toBe(990);
-    expect(top.icd10.pct).toBeCloseTo(6.0606, 3);
-    expect(top.algorithm.affected).toBe(36);
+    expect(top.pct).toBeCloseTo(6.0606, 3);
+    expect(top.affected).toBe(60);
   });
 
   it("keeps both alleles that share an rsID", () => {
     const ds = parsePenetranceCsv(real, META);
     expect(ds.records.filter((r) => r.rsid === "rs80359351")).toHaveLength(2);
+  });
+
+  it("ignores the clinical algorithm column", () => {
+    const csv =
+      "Disease,CHR,POS,REF,ALT,rsID,Individuals with variants n,ICD-10 affected individuals with variants n\nD,1,5,A,G,rs1,10,2\n";
+    const ds = parsePenetranceCsv(csv, META);
+    expect(ds.warnings).toEqual([]);
+    expect(ds.records[0].pct).toBe(20);
   });
 
   it("rejects files missing required columns", () => {
@@ -41,7 +58,7 @@ describe("parsePenetranceCsv", () => {
 
   it("skips rows where affected exceeds carriers", () => {
     const csv =
-      "Disease,CHR,POS,REF,ALT,rsID,Individuals with variants n,ICD-10 affected individuals with variants n,Clinical algorithm affected individuals with variants n\nD,1,5,A,G,rs1,10,11,2\n";
+      "Disease,CHR,POS,REF,ALT,rsID,Individuals with variants n,ICD-10 affected individuals with variants n\nD,1,5,A,G,rs1,10,11\n";
     const ds = parsePenetranceCsv(csv, META);
     expect(ds.records).toHaveLength(0);
     expect(ds.warnings.length).toBeGreaterThan(0);
@@ -49,12 +66,12 @@ describe("parsePenetranceCsv", () => {
 
   it("groups an Age column into a curve and uses the oldest age as lifetime", () => {
     const csv =
-      "Disease,CHR,POS,REF,ALT,rsID,Individuals with variants n,ICD-10 affected individuals with variants n,Clinical algorithm affected individuals with variants n,Age\n" +
-      "D,1,5,A,G,rs1,100,10,5,80\nD,1,5,A,G,rs1,100,2,1,40\n";
+      "Disease,CHR,POS,REF,ALT,rsID,Individuals with variants n,ICD-10 affected individuals with variants n,Age\n" +
+      "D,1,5,A,G,rs1,100,10,80\nD,1,5,A,G,rs1,100,2,40\n";
     const [rec] = parsePenetranceCsv(csv, META).records;
     expect(rec.ages?.map((a) => a.age)).toEqual([40, 80]);
-    expect(rec.icd10.pct).toBe(10);
-    expect(penetranceAtAge(rec, "icd10", 60)).toBeCloseTo(6);
+    expect(rec.pct).toBe(10);
+    expect(penetranceAtAge(rec, 60)).toBeCloseTo(6);
   });
 });
 
@@ -76,11 +93,39 @@ describe("stats", () => {
     expect(wilsonInterval(0, 0)).toEqual({ low: 0, high: 100 });
   });
 
+  it("oneInPhrase and formatRate", () => {
+    expect(oneInPhrase(0.32)).toBe("1 in 310");
+    expect(oneInPhrase(0.0005)).toBe("1 in 200,000");
+    expect(formatRate(12.9)).toBe("13%");
+    expect(formatRate(0.4)).toBe("about 1 in 250");
+  });
+
+  it("compareToBaseline only claims a difference when the baseline is outside the range", () => {
+    const ci = wilsonInterval(60, 990);
+    expect(compareToBaseline(6.06, ci, 1).verdict).toBe("higher");
+    expect(compareToBaseline(6.06, ci, 6).verdict).toBe("similar");
+    expect(compareToBaseline(6.06, ci, 20).verdict).toBe("lower");
+    expect(compareToBaseline(6, ci, 2).ratio).toBeCloseTo(3);
+    // Few carriers: the range is wide, so a 5x point estimate is still "similar".
+    expect(compareToBaseline(10, wilsonInterval(1, 10), 2).verdict).toBe("similar");
+  });
+
   it("formatPct", () => {
     expect(formatPct(0)).toBe("0%");
     expect(formatPct(0.04)).toBe("<0.1%");
     expect(formatPct(3.636)).toBe("3.6%");
     expect(formatPct(33.33)).toBe("33%");
+  });
+});
+
+describe("baselines", () => {
+  it("covers every disease in the bundled data", () => {
+    const diseases = new Set(parsePenetranceCsv(real, META).records.map((r) => r.disease));
+    for (const d of diseases) expect(baselineFor(d), d).toBeDefined();
+  });
+  it("matches ignoring case and returns undefined for unknown diseases", () => {
+    expect(baselineFor("Familial Cancer of Breast")?.pct).toBeGreaterThan(0);
+    expect(baselineFor("not a disease")).toBeUndefined();
   });
 });
 
@@ -90,9 +135,9 @@ describe("demo dataset", () => {
     expect(ds.synthetic).toBe(true);
     for (const rec of ds.records) {
       const ages = rec.ages!;
-      expect(ages[0].icd10).toBeCloseTo(0);
-      expect(ages[ages.length - 1].icd10).toBeCloseTo(rec.icd10.pct);
-      for (let i = 1; i < ages.length; i++) expect(ages[i].icd10).toBeGreaterThanOrEqual(ages[i - 1].icd10);
+      expect(ages[0].pct).toBeCloseTo(0);
+      expect(ages[ages.length - 1].pct).toBeCloseTo(rec.pct);
+      for (let i = 1; i < ages.length; i++) expect(ages[i].pct).toBeGreaterThanOrEqual(ages[i - 1].pct);
     }
   });
 });
@@ -194,19 +239,19 @@ describe("clinvar significance", () => {
 });
 
 describe("parser edge cases", () => {
-  const H = "Disease,CHR,POS,REF,ALT,rsID,Individuals with variants n,ICD-10 affected individuals with variants n,Clinical algorithm affected individuals with variants n";
+  const H = "Disease,CHR,POS,REF,ALT,rsID,Individuals with variants n,ICD-10 affected individuals with variants n";
   it("skips rows with blank numeric cells", () => {
-    expect(parsePenetranceCsv(`${H}\nD,1,,A,G,rs1,10,1,1\nD,1,5,A,G,rs2,,0,0\n`, META).records).toHaveLength(0);
+    expect(parsePenetranceCsv(`${H}\nD,1,,A,G,rs1,10,1\nD,1,5,A,G,rs2,,0\n`, META).records).toHaveLength(0);
   });
   it("warns on repeated variant rows", () => {
-    const ds = parsePenetranceCsv(`${H}\nD,1,5,A,G,rs1,10,1,1\nD,1,5,A,G,rs1,10,2,2\n`, META);
+    const ds = parsePenetranceCsv(`${H}\nD,1,5,A,G,rs1,10,1\nD,1,5,A,G,rs1,10,2\n`, META);
     expect(ds.records).toHaveLength(1);
     expect(ds.warnings.join()).toMatch(/repeats/);
   });
   it("takes the carrier count from the oldest age row", () => {
-    const csv = `${H},Age\nD,1,5,A,G,rs1,100,2,1,40\nD,1,5,A,G,rs1,60,6,3,80\n`;
+    const csv = `${H},Age\nD,1,5,A,G,rs1,100,2,40\nD,1,5,A,G,rs1,60,6,80\n`;
     const [rec] = parsePenetranceCsv(csv, META).records;
     expect(rec.carriers).toBe(60);
-    expect(rec.icd10.affected).toBe(6);
+    expect(rec.affected).toBe(6);
   });
 });

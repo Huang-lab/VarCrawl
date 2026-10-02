@@ -29,8 +29,8 @@
   --sig-benign-bg: #99f6e4;
   --sig-benign-fg: #0f766e;
   --sig-benign-border: #0d9488;
-  --pen-icd10: #1d4ed8;
-  --pen-algorithm: #c2410c;
+  --pen-carrier: #1d4ed8;
+  --pen-baseline: #64748b;
   --pen-empty: #cbd5e1;
 }
 
@@ -66,8 +66,8 @@
     --sig-benign-bg: rgba(91, 224, 200, 0.2);
     --sig-benign-fg: #68e7d0;
     --sig-benign-border: #68e7d0;
-    --pen-icd10: #7ca3ff;
-    --pen-algorithm: #ffa65c;
+    --pen-carrier: #7ca3ff;
+    --pen-baseline: #a3b0c8;
     --pen-empty: #34456f;
   }
 }
@@ -462,10 +462,17 @@ code:focus-visible {
 .pen-sub strong { color: var(--text); }
 .pen-card .notice { margin: 0 0 10px; }
 .pen-body { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.pen-summary { margin: 0 0 8px; font-size: 15px; line-height: 1.5; }
+.pen-verdict { margin: 0 0 14px; padding: 8px 12px; font-size: 14px; border-left: 4px solid var(--border); background: var(--panel-2); border-radius: 0 6px 6px 0; }
+.pen-groups { display: flex; flex-wrap: wrap; gap: 24px; }
+.pen-help { margin-top: 14px; font-size: 13px; color: var(--muted); }
+.pen-help > summary { cursor: pointer; padding: 4px 0; }
+.pen-help li { margin: 6px 0; line-height: 1.45; }
+.pen-help strong { color: var(--text); }
 .pen-measure { flex: 0 0 auto; }
 .pen-measure h3 { margin: 0 0 2px; font-size: 13px; }
-.pen-measure.tone-icd10 h3 { color: var(--pen-icd10); }
-.pen-measure.tone-algorithm h3 { color: var(--pen-algorithm); }
+.pen-measure.tone-carrier h3 { color: var(--pen-carrier); }
+.pen-measure.tone-baseline h3 { color: var(--pen-baseline); }
 .pen-big { margin: 0 0 6px; color: var(--muted); font-size: 12px; }
 .pen-big strong { font-size: 28px; line-height: 1; color: var(--text); margin-right: 4px; }
 .pen-detail { margin: 6px 0 0; font-size: 12px; }
@@ -475,8 +482,8 @@ code:focus-visible {
 .person { position: relative; display: block; width: 12px; height: 22px; }
 .person svg { position: absolute; inset: 0; width: 100%; height: 100%; fill: var(--pen-empty); }
 .person-fill { position: absolute; inset: 0; }
-.tone-icd10 .person-fill svg { fill: var(--pen-icd10); }
-.tone-algorithm .person-fill svg { fill: var(--pen-algorithm); }
+.tone-carrier .person-fill svg { fill: var(--pen-carrier); }
+.tone-baseline .person-fill svg { fill: var(--pen-baseline); }
 
 .age-slider { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 .age-slider input { flex: 1; accent-color: var(--accent); }
@@ -485,15 +492,14 @@ code:focus-visible {
 .age-chart .grid-line { stroke: var(--border); stroke-width: 1; }
 .age-chart .tick { fill: var(--muted); font-size: 11px; }
 .age-chart .series { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
-.age-chart .series-icd10 { stroke: var(--pen-icd10); }
-.age-chart .series-algorithm { stroke: var(--pen-algorithm); stroke-dasharray: 6 4; }
+.age-chart .series-carrier { stroke: var(--pen-carrier); }
+.age-chart .series-baseline { stroke: var(--pen-baseline); stroke-dasharray: 6 4; stroke-width: 2; }
 .age-chart .age-marker { stroke: var(--muted); stroke-dasharray: 3 3; }
-.age-chart .dot-icd10 { fill: var(--pen-icd10); }
-.age-chart .dot-algorithm { fill: var(--pen-algorithm); }
+.age-chart .dot-carrier { fill: var(--pen-carrier); }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--muted); margin-top: 4px; }
 .legend-item i { display: inline-block; width: 18px; height: 0; border-top: 3px solid; vertical-align: middle; margin-right: 4px; }
-.legend-item.tone-icd10 i { border-color: var(--pen-icd10); }
-.legend-item.tone-algorithm i { border-color: var(--pen-algorithm); border-top-style: dashed; }
+.legend-item.tone-carrier i { border-color: var(--pen-carrier); }
+.legend-item.tone-baseline i { border-color: var(--pen-baseline); border-top-style: dashed; }
 
 @media (max-width: 760px) {
   .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -526,8 +532,8 @@ code:focus-visible {
 
 .lifetime-chart svg { cursor: default; }
 .lifetime-chart .row-label { fill: var(--text); font-size: 13px; }
-.lifetime-chart .bar-icd10 { fill: var(--pen-icd10); }
-.lifetime-chart .bar-algorithm { fill: var(--pen-algorithm); }
+.lifetime-chart .bar-carrier { fill: var(--pen-carrier); }
+.lifetime-chart .bar-baseline { fill: var(--pen-baseline); }
 .lifetime-chart .whisker { stroke: var(--text); stroke-width: 1.5; }
 .vh-protein { font-size: 34px; }
 /* Export / share controls, shown above the results once a search resolves. */

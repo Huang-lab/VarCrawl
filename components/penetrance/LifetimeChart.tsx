@@ -1,20 +1,21 @@
-import { MEASURE_LABELS, type MeasureKey } from "@/lib/penetrance/types";
 import { formatPct } from "@/lib/penetrance/stats";
 import { niceMax } from "./AgeChart";
 
 interface Row {
-  measure: MeasureKey;
+  key: "carrier" | "baseline";
+  label: string;
   pct: number;
-  low: number;
-  high: number;
+  /** 95% confidence range, drawn as a whisker. */
+  low?: number;
+  high?: number;
 }
 
 const W = 640;
-const M = { left: 120, right: 20, top: 8, rowH: 52, axis: 28 };
+const M = { left: 150, right: 20, top: 8, rowH: 52, axis: 28 };
 
-/** Horizontal bars with 95% CI whiskers; used when a dataset has no age dimension. */
+/** Horizontal bars (with 95% CI whiskers where known); used when a dataset has no age dimension. */
 export function LifetimeChart({ rows }: { rows: Row[] }) {
-  const max = niceMax(Math.max(...rows.map((r) => r.high)));
+  const max = niceMax(Math.max(...rows.map((r) => r.high ?? r.pct)));
   const x = (v: number) => M.left + (v / max) * (W - M.left - M.right);
   const H = M.top + rows.length * M.rowH + M.axis;
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * max);
@@ -24,7 +25,9 @@ export function LifetimeChart({ rows }: { rows: Row[] }) {
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={rows.map((r) => `${MEASURE_LABELS[r.measure]} ${formatPct(r.pct)}, 95% CI ${formatPct(r.low)} to ${formatPct(r.high)}`).join("; ")}
+        aria-label={rows
+          .map((r) => `${r.label} ${formatPct(r.pct)}${r.low !== undefined && r.high !== undefined ? `, 95% CI ${formatPct(r.low)} to ${formatPct(r.high)}` : ""}`)
+          .join("; ")}
       >
         {ticks.map((t) => (
           <g key={t}>
@@ -37,14 +40,18 @@ export function LifetimeChart({ rows }: { rows: Row[] }) {
         {rows.map((r, i) => {
           const cy = M.top + i * M.rowH + M.rowH / 2;
           return (
-            <g key={r.measure}>
+            <g key={r.key}>
               <text className="row-label" x={M.left - 10} y={cy + 4} textAnchor="end">
-                {MEASURE_LABELS[r.measure]}
+                {r.label}
               </text>
-              <rect className={`bar bar-${r.measure}`} x={M.left} y={cy - 10} width={Math.max(2, x(r.pct) - M.left)} height={20} rx={3} />
-              <line className="whisker" x1={x(r.low)} x2={x(r.high)} y1={cy} y2={cy} />
-              <line className="whisker" x1={x(r.low)} x2={x(r.low)} y1={cy - 7} y2={cy + 7} />
-              <line className="whisker" x1={x(r.high)} x2={x(r.high)} y1={cy - 7} y2={cy + 7} />
+              <rect className={`bar bar-${r.key}`} x={M.left} y={cy - 10} width={Math.max(2, x(r.pct) - M.left)} height={20} rx={3} />
+              {r.low !== undefined && r.high !== undefined && (
+                <>
+                  <line className="whisker" x1={x(r.low)} x2={x(r.high)} y1={cy} y2={cy} />
+                  <line className="whisker" x1={x(r.low)} x2={x(r.low)} y1={cy - 7} y2={cy + 7} />
+                  <line className="whisker" x1={x(r.high)} x2={x(r.high)} y1={cy - 7} y2={cy + 7} />
+                </>
+              )}
             </g>
           );
         })}

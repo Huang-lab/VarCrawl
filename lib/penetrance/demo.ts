@@ -34,7 +34,7 @@ export function makeDemoDataset(source: PenetranceRecord[]): PenetranceDataset {
   const records = source.map((rec) => {
     const ages: AgePoint[] = DEMO_AGES.map((age) => {
       const f = curve(age, rec.disease);
-      return { age, icd10: rec.icd10.pct * f, algorithm: rec.algorithm.pct * f };
+      return { age, pct: rec.pct * f };
     });
     return { ...rec, ages };
   });

@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatPct, iconFills, penetranceAtAge, wilsonInterval } from "@/lib/penetrance/stats";
-import { MEASURE_LABELS, type MeasureKey, type PenetranceRecord } from "@/lib/penetrance/types";
+import { baselineFor } from "@/lib/penetrance/baseline";
+import {
+  compareToBaseline,
+  formatPct,
+  formatRate,
+  formatRatio,
+  iconFills,
+  penetranceAtAge,
+  wilsonInterval,
+} from "@/lib/penetrance/stats";
+import type { PenetranceRecord } from "@/lib/penetrance/types";
 import { AgeChart } from "./AgeChart";
 import { LifetimeChart } from "./LifetimeChart";
 import { PeopleGrid } from "./PeopleGrid";
 
 const LOW_N = 30;
-const MEASURES: MeasureKey[] = ["icd10", "algorithm"];
 
 export const recordLabel = (r: PenetranceRecord) => r.disease;
 
@@ -19,9 +27,18 @@ interface Props {
   footer?: React.ReactNode;
 }
 
-/** Penetrance for one variant: 100 people per definition, plus an age curve when available. */
+const VERDICT_TEXT = {
+  higher: "Above the published general-population rate",
+  similar: "Not clearly different from the published general-population rate",
+  lower: "Below the published general-population rate",
+} as const;
+
+/** "6.1" or "12": one decimal under 10, none above. */
+const short = (v: number) => (v >= 10 ? Math.round(v) : Math.round(v * 10) / 10);
+
+/** Penetrance for one variant, read against the disease's base rate when one is known. */
 export function PenetranceCard({ records, matchedBy, synthetic, footer }: Props) {
-  const best = records.find((r) => r.icd10.affected > 0 || r.algorithm.affected > 0) ?? records[0];
+  const best = records.find((r) => r.affected > 0) ?? records[0];
   const [selectedId, setSelectedId] = useState(best.id);
   const [ageChoice, setAgeChoice] = useState<number | null>(null);
   useEffect(() => {
@@ -35,16 +52,20 @@ export function PenetranceCard({ records, matchedBy, synthetic, footer }: Props)
   const age = rec.ages ? Math.min(ageChoice ?? maxAge, maxAge) : undefined;
   const when = age !== undefined ? `by age ${age}` : "over a lifetime";
 
-  const values = MEASURES.map((m) => {
-    const pct = age !== undefined ? (penetranceAtAge(rec, m, age) ?? rec[m].pct) : rec[m].pct;
-    const affected = age !== undefined ? (pct / 100) * rec.carriers : rec[m].affected;
-    return { measure: m, pct, affected, ci: wilsonInterval(affected, rec.carriers) };
-  });
+  const pct = age !== undefined ? (penetranceAtAge(rec, age) ?? rec.pct) : rec.pct;
+  const affected = age !== undefined ? (pct / 100) * rec.carriers : rec.affected;
+  const ci = wilsonInterval(affected, rec.carriers);
+
+  // Base rates are lifetime or overall figures, so they only line up with the full-lifetime view.
+  const baseline = baselineFor(rec.disease);
+  const comparable = age === undefined || age >= maxAge;
+  const comparison = baseline && comparable ? compareToBaseline(pct, ci, baseline.pct) : undefined;
+  const baselineLabel = baseline ? `General population ${baseline.kind}` : "";
 
   return (
     <section className="panel pen-card" aria-label="Penetrance">
       <div className="pen-header">
-        <h2>Penetrance</h2>
+        <h2>How many carriers have the disease?</h2>
         {records.length > 1 && (
           <div className="seg" role="group" aria-label="Condition">
             {records.map((r) => (
@@ -81,29 +102,78 @@ export function PenetranceCard({ records, matchedBy, synthetic, footer }: Props)
         </p>
       )}
 
+      <p className="pen-summary">
+        Of <strong>{rec.carriers.toLocaleString("en-US")}</strong> people with this variant,{" "}
+        <strong>{Math.round(affected * 10) / 10}</strong> ({formatPct(pct)}) have a recorded diagnosis of{" "}
+        {rec.disease.toLowerCase()} {when}.
+        {baseline && comparable && (
+          <>
+            {" "}
+            In the general population ({baseline.population}) the {baseline.kind} is {formatRate(baseline.pct)}.
+          </>
+        )}
+      </p>
+      {comparison && (
+        <p className={`pen-verdict verdict-${comparison.verdict}`}>
+          <strong>{VERDICT_TEXT[comparison.verdict]}.</strong>{" "}
+          {comparison.verdict === "similar"
+            ? "The carriers' 95% range includes the general-population rate, so this data cannot show a difference."
+            : `About ${formatRatio(comparison.ratio)} the published rate.`}{" "}
+          <span className="muted-small">
+            Not adjusted for age, sex, or ancestry, and the two groups were sampled differently
+            {comparison.verdict === "lower" ? ", so this does not show the variant is protective" : ""}.
+          </span>
+        </p>
+      )}
+      {baseline && !comparable && (
+        <p className="muted-small">
+          The general-population rate is a lifetime or overall figure, so it is compared only at the oldest age.
+        </p>
+      )}
+      {!baseline && (
+        <p className="muted-small">No general-population rate is on file for this disease, so there is nothing to compare against.</p>
+      )}
+
       <div className="pen-body">
-        {values.map(({ measure, pct, affected, ci }) => {
-          const shown = pct;
-          const shownText = shown >= 10 ? Math.round(shown) : Math.round(shown * 10) / 10;
-          return (
-            <div key={measure} className={`pen-measure tone-${measure}`}>
-              <h3>{MEASURE_LABELS[measure]}</h3>
+        <div className="pen-groups">
+          <div className="pen-measure tone-carrier">
+            <h3>People with this variant</h3>
+            <p className="pen-big">
+              <strong>{short(pct)}</strong> <span>of 100 {when}</span>
+            </p>
+            <PeopleGrid
+              fills={iconFills(pct, 100)}
+              tone="carrier"
+              label={`${short(pct)} of 100 carriers have a diagnosis of ${rec.disease} ${when}`}
+            />
+            <p className="pen-detail">
+              {Math.round(affected * 10) / 10} of {rec.carriers.toLocaleString("en-US")}
+              <br />
+              <span className="muted-small">
+                Likely range: {formatPct(ci.low)} to {formatPct(ci.high)}
+              </span>
+            </p>
+          </div>
+
+          {baseline && comparable && (
+            <div className="pen-measure tone-baseline">
+              <h3>General population</h3>
               <p className="pen-big">
-                <strong>{shownText}</strong> <span>of 100 {when}</span>
+                <strong>{short(baseline.pct)}</strong> <span>of 100 ({baseline.kind})</span>
               </p>
               <PeopleGrid
-                fills={iconFills(pct, 100)}
-                tone={measure}
-                label={`${shownText} of 100 carriers affected by ${MEASURE_LABELS[measure]} ${when}`}
+                fills={iconFills(baseline.pct, 100)}
+                tone="baseline"
+                label={`${short(baseline.pct)} of 100 people in the general population have ${rec.disease} (${baseline.kind})`}
               />
               <p className="pen-detail">
-                {formatPct(pct)} · {Math.round(affected * 10) / 10} of {rec.carriers.toLocaleString("en-US")}
+                {formatRate(baseline.pct)}
                 <br />
-                <span className="muted-small">95% CI {formatPct(ci.low)} to {formatPct(ci.high)}</span>
+                <span className="muted-small">{baseline.source}</span>
               </p>
             </div>
-          );
-        })}
+          )}
+        </div>
 
         <div className="pen-side">
           {rec.ages && age !== undefined ? (
@@ -122,21 +192,53 @@ export function PenetranceCard({ records, matchedBy, synthetic, footer }: Props)
                   aria-label="Age in years"
                 />
               </label>
-              <AgeChart points={rec.ages} age={age} onAge={setAgeChoice} synthetic={synthetic} />
+              <AgeChart
+                points={rec.ages}
+                age={age}
+                onAge={setAgeChoice}
+                baseline={baseline && { pct: baseline.pct, label: baselineLabel }}
+                synthetic={synthetic}
+              />
             </>
           ) : (
             <>
               <LifetimeChart
-                rows={values.map((v) => ({ measure: v.measure, pct: v.pct, low: v.ci.low, high: v.ci.high }))}
+                rows={[
+                  { key: "carrier", label: "People with this variant", pct, low: ci.low, high: ci.high },
+                  ...(baseline ? [{ key: "baseline" as const, label: "General population", pct: baseline.pct }] : []),
+                ]}
               />
               <p className="muted-small">
-                Lifetime penetrance only. Bars show the estimate; whiskers show the 95% confidence range. Load
-                age-specific data (a CSV with an Age column) to see penetrance by age.
+                Lifetime penetrance only. The whisker is the 95% range. Load age-specific data (a CSV with an Age
+                column) to see penetrance by age.
               </p>
             </>
           )}
         </div>
       </div>
+
+      <details className="pen-help">
+        <summary>How to read this</summary>
+        <ul>
+          <li>
+            <strong>Penetrance</strong> is the share of people carrying the variant who go on to have the disease. A
+            low number does not mean the variant is harmless, and a high number does not mean it is certain.
+          </li>
+          <li>
+            <strong>Diagnosis</strong> here means an ICD-10 code in the person&apos;s health record. Undiagnosed
+            disease is missed, and a code can occasionally be recorded without the disease being present.
+          </li>
+          <li>
+            <strong>Likely range</strong> (95% confidence interval) shows how precise the estimate is. With few
+            carriers it is wide, so treat the number as rough.
+          </li>
+          <li>
+            <strong>General population</strong> figures come from published studies, not from the cohort behind these
+            carriers, so differences in age, sex, and ancestry can shift the comparison. Use it for orientation, not
+            as a risk calculator.
+          </li>
+        </ul>
+      </details>
       {footer}
     </section>
   );

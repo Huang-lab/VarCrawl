@@ -14,11 +14,11 @@ function Person() {
 interface Props {
   /** Fill fraction (0-1) for each of the 100 people. */
   fills: number[];
-  tone: "icd10" | "algorithm";
+  tone: "carrier" | "baseline";
   label: string;
 }
 
-/** 10x10 icon array: each icon is one person out of 100; filled icons developed the condition. */
+/** 10x10 icon array: each icon is one person out of 100; filled icons have the condition. */
 export const PeopleGrid = memo(function PeopleGrid({ fills, tone, label }: Props) {
   return (
     <div className={`people-grid tone-${tone}`} role="img" aria-label={label}>

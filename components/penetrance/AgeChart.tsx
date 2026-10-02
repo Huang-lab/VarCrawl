@@ -1,4 +1,4 @@
-import { MEASURE_LABELS, type AgePoint, type MeasureKey } from "@/lib/penetrance/types";
+import type { AgePoint } from "@/lib/penetrance/types";
 import { formatPct, interpolateAges as interpolate } from "@/lib/penetrance/stats";
 
 const W = 640;
@@ -9,6 +9,8 @@ interface Props {
   points: AgePoint[];
   age: number;
   onAge: (age: number) => void;
+  /** General-population rate to draw as a reference line, when known. */
+  baseline?: { pct: number; label: string };
   synthetic?: boolean;
 }
 
@@ -18,13 +20,13 @@ export function niceMax(v: number): number {
   return steps.find((s) => s >= v * 1.05) ?? 100;
 }
 
-export function AgeChart({ points, age, onAge, synthetic }: Props) {
+export function AgeChart({ points, age, onAge, baseline, synthetic }: Props) {
   const minAge = points[0].age;
   const maxAge = points[points.length - 1].age;
-  const yMax = niceMax(Math.max(...points.map((p) => Math.max(p.icd10, p.algorithm))));
+  const yMax = niceMax(Math.max(baseline?.pct ?? 0, ...points.map((p) => p.pct)));
   const x = (a: number) => M.left + ((a - minAge) / Math.max(1, maxAge - minAge)) * (W - M.left - M.right);
   const y = (v: number) => H - M.bottom - (v / yMax) * (H - M.top - M.bottom);
-  const line = (k: MeasureKey) => points.map((p, i) => `${i ? "L" : "M"}${x(p.age).toFixed(1)},${y(p[k]).toFixed(1)}`).join(" ");
+  const path = points.map((p, i) => `${i ? "L" : "M"}${x(p.age).toFixed(1)},${y(p.pct).toFixed(1)}`).join(" ");
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * yMax);
   const xTicks = points.map((p) => p.age).filter((a) => a % 10 === 0);
 
@@ -33,7 +35,7 @@ export function AgeChart({ points, age, onAge, synthetic }: Props) {
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`Cumulative penetrance by age, ${minAge} to ${maxAge} years${synthetic ? " (synthetic demo)" : ""}`}
+        aria-label={`Cumulative share of carriers with the diagnosis by age, ${minAge} to ${maxAge} years${synthetic ? " (synthetic demo)" : ""}`}
         onClick={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           const px = ((e.clientX - rect.left) / rect.width) * W;
@@ -57,21 +59,22 @@ export function AgeChart({ points, age, onAge, synthetic }: Props) {
         <text className="tick" x={(M.left + W - M.right) / 2} y={H - 4} textAnchor="middle">
           Age (years)
         </text>
-        <path className="series series-algorithm" d={line("algorithm")} />
-        <path className="series series-icd10" d={line("icd10")} />
+        {baseline && (
+          <line className="series series-baseline" x1={M.left} x2={W - M.right} y1={y(baseline.pct)} y2={y(baseline.pct)} />
+        )}
+        <path className="series series-carrier" d={path} />
         <line className="age-marker" x1={x(age)} x2={x(age)} y1={M.top} y2={H - M.bottom} />
-        {points.length > 0 &&
-          (["icd10", "algorithm"] as MeasureKey[]).map((k) => {
-            const v = interpolate(points, k, age);
-            return <circle key={k} className={`dot dot-${k}`} cx={x(age)} cy={y(v)} r={5} />;
-          })}
+        <circle className="dot dot-carrier" cx={x(age)} cy={y(interpolate(points, age))} r={5} />
       </svg>
       <figcaption className="legend">
-        {(["icd10", "algorithm"] as MeasureKey[]).map((k) => (
-          <span key={k} className={`legend-item tone-${k}`}>
-            <i aria-hidden="true" /> {MEASURE_LABELS[k]}: {formatPct(interpolate(points, k, age))} by age {age}
+        <span className="legend-item tone-carrier">
+          <i aria-hidden="true" /> People with this variant: {formatPct(interpolate(points, age))} by age {age}
+        </span>
+        {baseline && (
+          <span className="legend-item tone-baseline">
+            <i aria-hidden="true" /> {baseline.label}: {formatPct(baseline.pct)}
           </span>
-        ))}
+        )}
       </figcaption>
     </figure>
   );

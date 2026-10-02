@@ -13,7 +13,8 @@ import { useDatasets } from "@/components/penetrance/useDatasets";
 import { topSignificance } from "@/lib/clinvar/significance";
 import type { Assembly } from "@/lib/hgvs/types";
 import { findRecords, parseLocus } from "@/lib/penetrance/lookup";
-import { formatPct } from "@/lib/penetrance/stats";
+import { baselineFor } from "@/lib/penetrance/baseline";
+import { formatPct, formatRate } from "@/lib/penetrance/stats";
 import { pickHeadline } from "@/lib/variant/headline";
 
 interface VariantString { text: string; label: string }
@@ -313,7 +314,8 @@ export function Explorer() {
   }, [submitted, result, data.dataset]);
 
   const topSig = clinvar ? topSignificance(clinvar.records) : undefined;
-  const top = penetrance?.matches.find((r) => r.icd10.affected > 0 || r.algorithm.affected > 0) ?? penetrance?.matches[0];
+  const top = penetrance?.matches.find((r) => r.affected > 0) ?? penetrance?.matches[0];
+  const topBaseline = top ? baselineFor(top.disease) : undefined;
   // A miss is only final once the dataset is loaded and the variant has been resolved.
   const penetranceChecking = !data.dataset || (loading && !result);
   const failed = !loading && !result && !!error;
@@ -350,10 +352,12 @@ export function Explorer() {
             <div className="tile">
               <span className="tile-label">Penetrance</span>
               <strong className="tile-value">
-                {top ? `${formatPct(top.icd10.pct)} / ${formatPct(top.algorithm.pct)}` : penetranceChecking ? "Checking..." : "No data"}
+                {top ? formatPct(top.pct) : penetranceChecking ? "Checking..." : "No data"}
               </strong>
               <span className="tile-sub">
-                {top ? `${top.disease} (ICD-10 / algorithm)` : penetranceChecking ? "Looking up the variant" : "Not in the selected dataset"}
+                {top
+                  ? `${top.disease}${topBaseline ? ` (general population ${formatRate(topBaseline.pct)})` : ""}`
+                  : penetranceChecking ? "Looking up the variant" : "Not in the selected dataset"}
               </span>
             </div>
             <div className={`tile${clinvar || !loading ? "" : " pending"}`}>
