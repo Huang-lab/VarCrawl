@@ -131,6 +131,7 @@ function toArticle(hit: EuropePmcHit, pmid: string, phrase: string): EuropePmcAr
 
 export async function searchEuropePmcForVariantsDetailed(
   variants: string[],
+  opts: { deadline?: number } = {},
 ): Promise<EuropePmcSearchResult> {
   const diagnostics: EuropePmcDiagnostics = {
     phraseCount: variants.length,
@@ -140,8 +141,10 @@ export async function searchEuropePmcForVariantsDetailed(
     likelyRateLimited: false,
   };
 
-  const outcomes = await mapWithLimiter(europePmcLimiter(), variants, (phrase) =>
-    fetchEuropePmc(phrase),
+  const outcomes = await mapWithLimiter(europePmcLimiter(), variants, async (phrase) =>
+    opts.deadline !== undefined && Date.now() > opts.deadline
+      ? ({ ok: false, status: 599, hits: [] } as FetchOutcome)
+      : fetchEuropePmc(phrase),
   );
 
   // Fold in phrase order, so the article kept for a PMID and the ordering of

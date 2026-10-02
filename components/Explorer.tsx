@@ -133,13 +133,20 @@ interface Submitted {
   assembly: Assembly;
 }
 
+type StreamEvent =
+  | { type: "expand"; data: ExpandPart & { searchTerms?: SearchResponse["searchTerms"] } }
+  | { type: "clinvar"; data: ClinvarPart }
+  | { type: "pubmed"; data: PubmedPart }
+  | { type: "done" }
+  | { type: "error"; error: string };
+
 const keyOf = (s: Submitted) => `${s.assembly}|${s.query}`;
 
 export function Explorer() {
   const [submitted, setSubmitted] = useState<Submitted | null>(null);
   // The response is stored with the request it answers, so a result is never
   // shown under a different query's header.
-  const [response, setResponse] = useState<{ key: string; data: SearchResponse } | null>(null);
+  const [response, setResponse] = useState<{ key: string; parts: Partial<SearchResponse> } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // The form is controlled from here so it cannot drift out of step with the URL.
@@ -171,15 +178,15 @@ export function Explorer() {
       try {
         const res = await fetch("/api/search", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", Accept: "application/x-ndjson" },
           body: JSON.stringify({ query, assembly }),
           signal: controller.signal,
         });
-        const body = (await res.json()) as SearchResponse;
-
-        if (controller.signal.aborted) return;
 
         if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          if (res.status === 504 || res.status === 408) body.error ??= "The search timed out. Please retry.";
+          if (controller.signal.aborted) return;
           if (res.status === 429) {
             const retry = res.headers.get("Retry-After");
             setError(
@@ -193,7 +200,50 @@ export function Explorer() {
           return;
         }
 
-        setResponse({ key: keyOf(request), data: body });
+        // Each line is one event; apply it as it arrives so the page fills in
+        // piece by piece (variant, then whichever source finishes first).
+        const apply = (ev: StreamEvent) => {
+          if (controller.signal.aborted) return;
+          if (ev.type === "error") {
+            setError(ev.error);
+          } else if (ev.type === "expand") {
+            setResponse({ key: keyOf(request), parts: ev.data });
+          } else if (ev.type === "clinvar" || ev.type === "pubmed") {
+            setResponse((r) => (r?.key === keyOf(request) ? { ...r, parts: { ...r.parts, [ev.type]: ev.data } } : r));
+          }
+        };
+        let sawDone = false;
+        let sawGarbage = false;
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffered = "";
+        for (;;) {
+          const { done, value } = await reader.read();
+          buffered += decoder.decode(value, { stream: !done });
+          const lines = buffered.split("\n");
+          buffered = done ? "" : (lines.pop() ?? "");
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            let ev: StreamEvent;
+            try {
+              ev = JSON.parse(line) as StreamEvent;
+            } catch {
+              // The host can append plain text (e.g. a timeout notice) to a cut-off stream.
+              sawGarbage = true;
+              continue;
+            }
+            apply(ev);
+            if (ev.type === "done") sawDone = true;
+          }
+          if (done) break;
+        }
+        if (!sawDone && !controller.signal.aborted) {
+          setError(
+            sawGarbage
+              ? "The search timed out before every source finished. Showing what was found; retry for the rest."
+              : "The connection closed before the search finished. Showing what was found.",
+          );
+        }
       } catch (e) {
         // An aborted request is a superseded search, not a failure.
         if (controller.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
@@ -244,9 +294,11 @@ export function Explorer() {
     };
   }, [runSearch, goHome]);
 
-  const result = submitted && response?.key === keyOf(submitted) ? response.data : null;
-  const pubmed = result?.pubmed;
-  const clinvar = result?.clinvar;
+  const parts = submitted && response?.key === keyOf(submitted) ? response.parts : null;
+  // `result` is the expansion; ClinVar and PubMed attach to it as they finish.
+  const result = parts && "canonical" in parts ? (parts as ExpandPart) : null;
+  const pubmed = parts?.pubmed;
+  const clinvar = parts?.clinvar;
   const headline = result ? pickHeadline(result) : undefined;
 
   // Penetrance can often be matched from the typed rsID or locus before the
@@ -344,15 +396,25 @@ export function Explorer() {
 
           {result && (
             <>
-              <ExportBar
-                query={result.input}
-                shareUrl={shareUrlFor(result.input, result.assembly)}
-                articles={pubmed?.articles ?? []}
-                records={clinvar?.records ?? []}
-                groups={result.groups}
-              />
-              {clinvar && <ClinvarResults data={clinvar} />}
-              {pubmed && <ResultsList data={pubmed} />}
+              {!loading && (
+                <ExportBar
+                  query={result.input}
+                  shareUrl={shareUrlFor(result.input, result.assembly)}
+                  articles={pubmed?.articles ?? []}
+                  records={clinvar?.records ?? []}
+                  groups={result.groups}
+                />
+              )}
+              {clinvar ? (
+                <ClinvarResults data={clinvar} />
+              ) : (
+                loading && <PendingPanel title="ClinVar" text="Searching ClinVar..." />
+              )}
+              {pubmed ? (
+                <ResultsList data={pubmed} />
+              ) : (
+                loading && <PendingPanel title="Literature" text="Searching PubMed and Europe PMC..." />
+              )}
               <details className="forms">
                 <summary>All forms of this variant ({result.variants.length})</summary>
                 <VariantPanel data={result} />
@@ -374,5 +436,14 @@ export function Explorer() {
         )
       </footer>
     </main>
+  );
+}
+
+function PendingPanel({ title, text }: { title: string; text: string }) {
+  return (
+    <section className="panel pending-panel" aria-label={title} role="status">
+      <h2>{title}</h2>
+      <p className="spinner">{text}</p>
+    </section>
   );
 }

@@ -19,7 +19,17 @@ interface Props {
   disabled: boolean;
 }
 
-const EXAMPLES = ["CFH p.R1210C", "BRAF p.V600E", "KRAS p.G12D", "TP53 p.R175H", "APOB p.R3527Q"];
+// Every example has penetrance data in the bundled eTable 4, across several conditions.
+const EXAMPLES = [
+  "ABCA4 p.G1961E",
+  "GCGR p.G40S",
+  "TP53 p.R175H",
+  "BRCA2 p.E1308K",
+  "LDLR p.R633C",
+  "CFH p.R1210C",
+  "APOE p.E31K",
+  "AR p.A871E",
+];
 
 export function SearchForm({
   query,

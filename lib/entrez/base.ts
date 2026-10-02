@@ -34,6 +34,12 @@ export interface EntrezConfig {
   apiKey?: string;
   email?: string;
   tool?: string;
+  /**
+   * Epoch ms after which phrase searches that have not started are skipped and
+   * reported as failed, so a slow query returns partial results before the
+   * serverless function limit instead of being killed with no response.
+   */
+  deadline?: number;
 }
 
 export interface EntrezDiagnostics {
@@ -363,8 +369,10 @@ export async function searchPhrasesInDbWithDiagnostics(
   diag.phraseCount = phrases.length;
 
   const limiter = limiterFor(cfg);
-  const results = await mapWithLimiter(limiter, phrases, (phrase) =>
-    esearchPhraseWithStatus(db, phrase, cfg),
+  const results = await mapWithLimiter(limiter, phrases, async (phrase) =>
+    cfg.deadline !== undefined && Date.now() > cfg.deadline
+      ? failedSearch(0)
+      : esearchPhraseWithStatus(db, phrase, cfg),
   );
 
   // Accumulate in phrase order so `matchedBy` sets are built deterministically

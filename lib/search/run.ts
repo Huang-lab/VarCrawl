@@ -87,7 +87,7 @@ export async function runPubmedSearch(
 ): Promise<PubmedPayload> {
   const [pubmedRes, europePmcRes] = await Promise.all([
     searchPubmedForVariantsDetailed(variants, cfg),
-    searchEuropePmcForVariantsDetailed(variants),
+    searchEuropePmcForVariantsDetailed(variants, { deadline: cfg.deadline }),
   ]);
 
   const articles = mergeArticles(
