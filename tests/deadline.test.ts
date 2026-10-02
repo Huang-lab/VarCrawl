@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { searchPhrasesInDbWithDiagnostics } from "@/lib/entrez/base";
 import { searchEuropePmcForVariantsDetailed } from "@/lib/pubmed/europepmc";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("soft deadline", () => {
   it("skips unstarted PubMed phrases after the deadline and reports partial", async () => {
