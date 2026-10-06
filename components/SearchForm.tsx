@@ -19,16 +19,12 @@ interface Props {
   disabled: boolean;
 }
 
-// Every example has penetrance data in the bundled eTable 4, across several conditions.
 const EXAMPLES = [
-  "ABCA4 p.G1961E",
-  "GCGR p.G40S",
-  "TP53 p.R175H",
-  "BRCA2 p.E1308K",
-  "LDLR p.R633C",
-  "CFH p.R1210C",
-  "APOE p.E31K",
-  "AR p.A871E",
+  "BRAF p.V600E",
+  "NM_004333.6:c.1799T>A",
+  "chr7:g.140753336A>T",
+  "rs113488022",
+  "KRAS G12D",
 ];
 
 export function SearchForm({
@@ -50,7 +46,7 @@ export function SearchForm({
       >
         <input
           type="text"
-          placeholder="rsID, HGVS, or gene + change (e.g. rs80359550, BRAF p.V600E)"
+          placeholder="rsID, HGVS, or gene + change (e.g. rs113488022, BRAF p.V600E)"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           onFocus={(e) => e.target.select()}

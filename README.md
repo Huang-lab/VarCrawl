@@ -130,22 +130,10 @@ by clinical significance (Pathogenic → Likely Pathogenic → VUS → …).
     serverless function budget.
   - Source diagnostics mark likely partial/rate-limited upstream retrievals.
 
-## Penetrance and literature in one search
+## Looking for penetrance?
 
-One search box takes an rsID, HGVS, or gene + change.
-The result page shows a summary (variant, penetrance, ClinVar, literature count), then a penetrance card, then ClinVar and PubMed/Europe PMC results.
-Penetrance is matched by rsID, or by GRCh38 position.
-Penetrance is the share of carriers with an ICD-10 diagnosis of the disease; the clinical algorithm (ML phenotype) column of eTable 4 is not used.
-The card is written for non-specialist clinicians: a plain-language summary sentence, 100-person icon arrays, and a "How to read this" glossary.
-Each estimate has a 95% Wilson confidence range, shown as a "likely range", and variants with fewer than 30 carriers are flagged.
-
-Where a published general-population rate is on file (`lib/penetrance/baseline.ts`), the card sets the carriers' rate beside it and says whether it is higher, lower, or not clearly different.
-"Higher" or "lower" is only claimed when the baseline falls outside the carriers' 95% range.
-These base rates are approximate figures from the literature, not the rate in the source cohort, and are compared only at the lifetime (oldest age) view.
-
-Data is bundled in `public/data/etable4_penetrance.csv` (lifetime penetrance, all ages) and you can upload your own CSV with the same columns (only the ICD-10 count column is needed).
-Add an `Age` column to provide age-specific data: rows sharing a variant form a cumulative penetrance curve, and the card shows an age slider and chart.
-The "Demo: age-specific" dataset is synthetic and illustrative only.
+Variant penetrance and base-rate comparison now live in a separate project, VCR (variant cancer risk): <https://github.com/Huang-lab/VCR>.
+VarCrawl stays focused on literature and ClinVar records for a mutation.
 
 ## Performance
 
