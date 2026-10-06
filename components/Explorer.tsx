@@ -1,20 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SearchForm } from "@/components/SearchForm";
 import { VariantPanel } from "@/components/VariantPanel";
 import { VariantHeader } from "@/components/VariantHeader";
 import { ResultsList } from "@/components/ResultsList";
 import { ClinvarResults } from "@/components/ClinvarResults";
 import { ExportBar } from "@/components/ExportBar";
-import { DataSource } from "@/components/penetrance/DataSource";
-import { PenetranceCard } from "@/components/penetrance/PenetranceCard";
-import { useDatasets } from "@/components/penetrance/useDatasets";
 import { topSignificance } from "@/lib/clinvar/significance";
 import type { Assembly } from "@/lib/hgvs/types";
-import { findRecords, parseLocus } from "@/lib/penetrance/lookup";
-import { baselineFor } from "@/lib/penetrance/baseline";
-import { formatPct, formatRate } from "@/lib/penetrance/stats";
 import { pickHeadline } from "@/lib/variant/headline";
 
 interface VariantString { text: string; label: string }
@@ -153,7 +147,6 @@ export function Explorer() {
   // The form is controlled from here so it cannot drift out of step with the URL.
   const [query, setQuery] = useState("");
   const [assembly, setAssembly] = useState<Assembly>("GRCh38");
-  const data = useDatasets();
 
   // Cancels the previous search when a new one starts, so a slow earlier
   // response can never overwrite a newer one.
@@ -302,22 +295,7 @@ export function Explorer() {
   const clinvar = parts?.clinvar;
   const headline = result ? pickHeadline(result) : undefined;
 
-  // Penetrance can often be matched from the typed rsID or locus before the
-  // server has answered; the resolved variant refines or supplies the match.
-  const penetrance = useMemo(() => {
-    if (!submitted || !data.dataset) return null;
-    const q = submitted.query.trim();
-    const rsid = /^rs\d+$/i.test(q) ? q : result?.canonical.rsid;
-    const locus =
-      submitted.assembly === "GRCh38" ? (parseLocus(q) ?? parseLocus(result?.canonical.hgvsg)) : undefined;
-    return findRecords(data.dataset.records, { rsid, locus });
-  }, [submitted, result, data.dataset]);
-
   const topSig = clinvar ? topSignificance(clinvar.records) : undefined;
-  const top = penetrance?.matches.find((r) => r.affected > 0) ?? penetrance?.matches[0];
-  const topBaseline = top ? baselineFor(top.disease) : undefined;
-  // A miss is only final once the dataset is loaded and the variant has been resolved.
-  const penetranceChecking = !data.dataset || (loading && !result);
   const failed = !loading && !result && !!error;
 
   return (
@@ -328,7 +306,7 @@ export function Explorer() {
             VarCrawl
           </button>
         </h1>
-        <p className="subtitle">Look up a variant: penetrance, ClinVar, and literature in one search.</p>
+        <p className="subtitle">Find every PubMed, Europe PMC, and ClinVar record that mentions a mutation.</p>
       </header>
 
       <SearchForm
@@ -341,7 +319,6 @@ export function Explorer() {
       />
       {loading && <div className="progress" role="progressbar" aria-label="Searching" />}
 
-      {data.error && <div className="error" role="alert">{data.error}</div>}
       {error && <div className="error" role="alert">{error}</div>}
 
       {submitted && (
@@ -349,17 +326,6 @@ export function Explorer() {
           <VariantHeader query={submitted.query} headline={headline} resolving={loading && !result} failed={failed} />
 
           <div className="summary" aria-label="Summary">
-            <div className="tile">
-              <span className="tile-label">Penetrance</span>
-              <strong className="tile-value">
-                {top ? formatPct(top.pct) : penetranceChecking ? "Checking..." : "No data"}
-              </strong>
-              <span className="tile-sub">
-                {top
-                  ? `${top.disease}${topBaseline ? ` (general population ${formatRate(topBaseline.pct)})` : ""}`
-                  : penetranceChecking ? "Looking up the variant" : "Not in the selected dataset"}
-              </span>
-            </div>
             <div className={`tile${clinvar || !loading ? "" : " pending"}`}>
               <span className="tile-label">ClinVar</span>
               {topSig ? (
@@ -379,24 +345,6 @@ export function Explorer() {
               <span className="tile-sub">PubMed / Europe PMC articles</span>
             </div>
           </div>
-
-          {penetrance && penetrance.matches.length > 0 ? (
-            <PenetranceCard
-              records={penetrance.matches}
-              matchedBy={penetrance.by}
-              synthetic={data.dataset?.synthetic}
-              footer={<DataSource data={data} />}
-            />
-          ) : penetranceChecking ? null : (
-            <section className="panel" aria-label="Penetrance">
-              <h2>Penetrance</h2>
-              <p className="muted-text">
-                No penetrance data for this variant in {data.dataset?.label ?? "the selected dataset"}.
-                Matching uses the rsID, or the GRCh38 position.
-              </p>
-              <DataSource data={data} />
-            </section>
-          )}
 
           {result && (
             <>
